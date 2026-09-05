@@ -1,4 +1,5 @@
-"""The fleet, hosted on Amazon Bedrock AgentCore Runtime.
+"""The fleet, hosted on Amazon Bedrock AgentCore Runtime. Lives at the repo root so
+`agents` and `api/vitaheart` resolve inside the container the same way they do locally.
 
 Payloads:
   {"action": "read", "readings": [BoxReading...]}     -> meds + trace + what the agents said
@@ -8,9 +9,13 @@ Payloads:
 """
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
 from bedrock_agentcore import BedrockAgentCoreApp
 
-from agents import run
+sys.path.insert(0, str(Path(__file__).resolve().parent / "api"))  # vitaheart.meds.schedule
+from agents import run  # noqa: E402
 
 app = BedrockAgentCoreApp()
 

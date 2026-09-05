@@ -73,6 +73,13 @@ export class VitaHeartApi {
     return this.json(this.url('/events', {since, wait: waitSeconds}));
   }
 
+  setClock(times: Record<string, string>): Promise<{clock: Record<string, string>}> {
+    return this.json(this.url('/clock'), {
+      method: 'POST',
+      body: JSON.stringify({household: this.household, times}),
+    });
+  }
+
   confirmDose(doseId: string): Promise<{id: string; ts: string}> {
     return this.json(this.url('/doses/confirm'), {
       method: 'POST',

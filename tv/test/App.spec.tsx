@@ -69,6 +69,30 @@ describe('Vita Heart TV', () => {
     await waitFor(() => expect(screen.getByText('✓ Taken')).toBeTruthy());
   });
 
+  it('lets the household set its own times when a dose has none', async () => {
+    let clock: Record<string, string> = {};
+    mockFetch({
+      '/board': () => ({...board, clock, dueDoses: [{...dose, dueAt: null, unscheduled: Object.keys(clock).length === 0}]}),
+      '/events': () => new Promise(() => {}),
+      '/clock': init => {
+        clock = JSON.parse(init?.body ?? '{}').times;
+        return {clock};
+      },
+    });
+    render(<App apiBaseUrl="https://api.test" household="AHMET1" />);
+    await waitFor(() => expect(screen.getByTestId('open-meds')).toBeTruthy());
+    fireEvent.press(screen.getByTestId('open-meds'));
+    fireEvent.press(screen.getByTestId('set-clock'));
+    expect(screen.getByTestId('time-morning').props.children).toBe('08:00');
+    fireEvent.press(screen.getByTestId('earlier-morning'));
+    expect(screen.getByTestId('time-morning').props.children).toBe('07:30');
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('confirm-clock'));
+    });
+    expect(clock).toEqual({morning: '07:30'});
+    await waitFor(() => expect(screen.queryByTestId('set-clock')).toBeNull());
+  });
+
   it('says plainly when the API is unreachable', async () => {
     mockFetch({'/events': () => new Promise(() => {})});
     render(<App apiBaseUrl="https://api.test" household="NOBODY" />);

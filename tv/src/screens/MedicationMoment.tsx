@@ -9,6 +9,7 @@ type Props = {
   doses: Dose[];
   onConfirm: (dose: Dose) => void;
   onBack: () => void;
+  onSetClock: () => void;
   pendingId: string | null;
 };
 
@@ -18,8 +19,9 @@ const SLOT_LABEL: Record<string, string> = {morning: 'Morning', midday: 'Midday'
  * One dose per card, one button per card. The recall line never says "recalled":
  * it hands over the question to ask the pharmacist, which is the VitaCabinet rule.
  */
-export function MedicationMoment({doses, onConfirm, onBack, pendingId}: Props) {
+export function MedicationMoment({doses, onConfirm, onBack, onSetClock, pendingId}: Props) {
   const open = doses.filter(d => !d.confirmed);
+  const unscheduled = doses.some(d => d.unscheduled);
   return (
     <View style={styles.root} testID="medication-moment">
       <Text style={styles.h1}>{open.length === 0 ? 'All taken. Well done.' : open.length === 1 ? 'One to take' : `${open.length} to take`}</Text>
@@ -48,6 +50,7 @@ export function MedicationMoment({doses, onConfirm, onBack, pendingId}: Props) {
         ))}
       </View>
       <View style={styles.footer}>
+        {unscheduled ? <BigButton label="Set my times" onPress={onSetClock} testID="set-clock" /> : null}
         <BigButton label="Back" tone="quiet" onPress={onBack} testID="back" />
       </View>
     </View>
@@ -60,5 +63,5 @@ const styles = StyleSheet.create({
   list: {flexDirection: 'row', flexWrap: 'wrap', gap: space.l},
   name: {color: color.text, fontSize: type.h2, fontWeight: '700'},
   body: {color: color.textDim, fontSize: type.small, lineHeight: type.small * 1.4},
-  footer: {marginTop: 'auto'},
+  footer: {marginTop: 'auto', flexDirection: 'row', gap: space.l},
 });

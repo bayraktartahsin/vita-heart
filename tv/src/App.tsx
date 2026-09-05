@@ -6,11 +6,12 @@ import {ApiError, Board, Dose, LiveEvent, VitaHeartApi} from './api/client';
 import {API_BASE_URL, DEFAULT_HOUSEHOLD} from './config';
 import {color, space, type} from './design/tokens';
 import {useLiveEvents} from './live/useLiveEvents';
+import {ClockSetup, Slot} from './screens/ClockSetup';
 import {MedicationMoment} from './screens/MedicationMoment';
 import {MorningBoard} from './screens/MorningBoard';
 import {Pairing} from './screens/Pairing';
 
-type Screen = 'pairing' | 'board' | 'meds';
+type Screen = 'pairing' | 'board' | 'meds' | 'clock';
 
 type Props = {apiBaseUrl?: string; household?: string | null};
 
@@ -25,6 +26,7 @@ export const App = ({apiBaseUrl = API_BASE_URL, household: initialHousehold = DE
   const [error, setError] = useState<string | null>(null);
   const [checkinPending, setCheckinPending] = useState(false);
   const [dosePending, setDosePending] = useState<string | null>(null);
+  const [clockPending, setClockPending] = useState(false);
 
   const api = useMemo(() => (household ? new VitaHeartApi(apiBaseUrl, household) : null), [apiBaseUrl, household]);
 
@@ -89,6 +91,27 @@ export const App = ({apiBaseUrl = API_BASE_URL, household: initialHousehold = DE
     [api, refresh],
   );
 
+  const saveClock = useCallback(
+    async (times: Record<string, string>) => {
+      if (!api) {
+        return;
+      }
+      setClockPending(true);
+      try {
+        await api.setClock(times);
+        await refresh();
+        setScreen('meds');
+      } catch (e) {
+        setError(e instanceof ApiError ? `${e.status}: ${e.message}` : String(e));
+      } finally {
+        setClockPending(false);
+      }
+    },
+    [api, refresh],
+  );
+
+  const slotsNeeded = Array.from(new Set((board?.dueDoses ?? []).map(d => d.slot))) as Slot[];
+
   return (
     <View style={styles.root}>
       <View style={styles.rail}>
@@ -104,8 +127,10 @@ export const App = ({apiBaseUrl = API_BASE_URL, household: initialHousehold = DE
               setScreen('board');
             }}
           />
+        ) : screen === 'clock' && board ? (
+          <ClockSetup slotsNeeded={slotsNeeded} initial={board.clock} onConfirm={saveClock} onBack={() => setScreen('meds')} pending={clockPending} />
         ) : screen === 'meds' && board ? (
-          <MedicationMoment doses={board.dueDoses} onConfirm={confirmDose} onBack={() => setScreen('board')} pendingId={dosePending} />
+          <MedicationMoment doses={board.dueDoses} onConfirm={confirmDose} onBack={() => setScreen('board')} onSetClock={() => setScreen('clock')} pendingId={dosePending} />
         ) : (
           <MorningBoard board={board} error={error} live={live} onCheckin={checkin} onOpenMeds={() => setScreen('meds')} checkinPending={checkinPending} />
         )}
