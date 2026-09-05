@@ -89,7 +89,7 @@ def events_since(code: str, since: str | None, limit: int = 50) -> list[dict[str
     else:
         cond = cond & Key("SK").begins_with("EV#")
     r = table().query(KeyConditionExpression=cond, Limit=limit)
-    items = r.get("Items", [])
+    items = plain(r.get("Items", []))
     # `between` is inclusive at the low end; drop anything at or before the cursor.
     return [i for i in items if not since or i["ts"] > since]
 
@@ -165,3 +165,39 @@ def set_clock(code: str, times: dict[str, str]) -> None:
                         UpdateExpression="SET clock = :c, updated = :u",
                         ExpressionAttributeValues={":c": times, ":u": now_iso()})
     emit(code, "board", {"clock": times})
+
+
+# ---- heart sessions (Phase 3) -------------------------------------------------------
+
+def start_session(code: str, session_id: str, source: str) -> dict[str, Any]:
+    ts = now_iso()
+    item = {"PK": _hh(code), "SK": f"SESSION#{session_id}", "id": session_id, "started": ts, "source": source, "state": "live"}
+    table().put_item(Item=item)
+    emit(code, "session", {"id": session_id, "state": "live", "source": source})
+    return item
+
+
+def add_hr(code: str, session_id: str, bpm: int, at: str | None = None) -> dict[str, Any]:
+    ts = at or now_iso()
+    item = {"PK": _hh(code), "SK": f"HR#{session_id}#{ts}", "ts": ts, "bpm": int(bpm), "session": session_id,
+            "ttl": int(datetime.now(timezone.utc).timestamp()) + 7 * 86400}
+    table().put_item(Item=item)
+    emit(code, "hr", {"session": session_id, "bpm": int(bpm), "ts": ts})
+    return item
+
+
+def finish_session(code: str, session_id: str, summary: dict[str, Any]) -> None:
+    table().update_item(Key={"PK": _hh(code), "SK": f"SESSION#{session_id}"},
+                        UpdateExpression="SET #s = :s, summary = :m, finished = :f",
+                        ExpressionAttributeNames={"#s": "state"},
+                        ExpressionAttributeValues={":s": "finished", ":m": summary, ":f": now_iso()})
+    emit(code, "session", {"id": session_id, "state": "finished", "summary": summary})
+
+
+def live_session(code: str) -> dict[str, Any] | None:
+    r = table().query(KeyConditionExpression=Key("PK").eq(_hh(code)) & Key("SK").begins_with("SESSION#"),
+                      ScanIndexForward=False, Limit=5)
+    for i in r.get("Items", []):
+        if i.get("state") == "live":
+            return plain(i)
+    return None

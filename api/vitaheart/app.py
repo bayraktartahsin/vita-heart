@@ -199,3 +199,60 @@ _WEB = Path(__file__).parent / "web"
 def cabinet_page() -> str:
     """The family's phone page: photograph the boxes. Served by the API so there is one origin."""
     return (_WEB / "cabinet.html").read_text(encoding="utf-8")
+
+
+# ---- heart sessions (Phase 3) ---------------------------------------------------------
+
+class SessionStartIn(BaseModel):
+    household: str = Field(min_length=4, max_length=12)
+    source: str = Field(default="watch", pattern="^(watch|recorded)$")
+
+
+@app.post("/session/start", status_code=201)
+def session_start(body: SessionStartIn) -> dict:
+    """The television opens a session; the Watch (or the labelled replay) then posts heart rate into it."""
+    import uuid
+
+    _profile_or_404(body.household)
+    sid = uuid.uuid4().hex[:10]
+    store.start_session(body.household, sid, body.source)
+    return {"id": sid, "source": body.source}
+
+
+class HrIn(BaseModel):
+    household: str = Field(min_length=4, max_length=12)
+    session: str = Field(min_length=6, max_length=20)
+    bpm: int = Field(ge=25, le=230)
+    at: str | None = None
+
+
+@app.post("/session/hr", status_code=202)
+def session_hr(body: HrIn) -> dict:
+    """One heart-rate sample from the wrist. Lands on the events channel within a second."""
+    _profile_or_404(body.household)
+    live = store.live_session(body.household)
+    if not live or live["id"] != body.session:
+        raise HTTPException(409, "that session is not live")
+    store.add_hr(body.household, body.session, body.bpm, body.at)
+    return {"ok": True}
+
+
+class SessionFinishIn(BaseModel):
+    household: str = Field(min_length=4, max_length=12)
+    session: str = Field(min_length=6, max_length=20)
+    summary: dict
+
+
+@app.post("/session/finish")
+def session_finish(body: SessionFinishIn) -> dict:
+    _profile_or_404(body.household)
+    store.finish_session(body.household, body.session, body.summary)
+    return {"id": body.session, "state": "finished"}
+
+
+@app.get("/session/live")
+def session_live(household: str = Query(..., min_length=4, max_length=12)) -> dict:
+    """What the Watch asks first: is the television waiting for me?"""
+    _profile_or_404(household)
+    live = store.live_session(household)
+    return {"live": live}
