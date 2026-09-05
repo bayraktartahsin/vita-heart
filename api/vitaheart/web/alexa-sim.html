@@ -1,0 +1,70 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Alexa+ · simulated surface · Vita Heart</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; font: 17px/1.45 -apple-system, system-ui, sans-serif; background: #0b0f14; color: #e8ecf1; }
+  main { max-width: 640px; margin: 0 auto; padding: 22px 18px 90px; }
+  .bar { display: flex; align-items: center; gap: 10px; color: #8fa3b8; font-size: 14px; }
+  .bar b { color: #31c4f3; }
+  .turn { margin: 16px 0; display: flex; flex-direction: column; gap: 8px; }
+  .you { align-self: flex-end; background: #1d2a3a; padding: 12px 16px; border-radius: 18px 18px 4px 18px; max-width: 85%; }
+  .alexa { align-self: flex-start; background: #12202e; border: 1px solid #1f3346; padding: 12px 16px; border-radius: 18px 18px 18px 4px; max-width: 92%; }
+  .alexa .tool { font-size: 12px; color: #31c4f3; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+  .card { margin-top: 10px; }
+  .mic { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); width: 76px; height: 76px; border-radius: 50%;
+         border: 0; background: #31c4f3; color: #04121b; font-size: 30px; box-shadow: 0 0 0 0 rgba(49,196,243,.6); }
+  .mic.listening { animation: pulse 1.2s infinite; }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(49,196,243,.6);} 100% { box-shadow: 0 0 0 26px rgba(49,196,243,0);} }
+  form.typed { display: flex; gap: 8px; margin-top: 12px; }
+  form.typed input { flex: 1; font: inherit; padding: 12px; border-radius: 12px; border: 1px solid #1f3346; background: #0f1721; color: #e8ecf1; }
+  form.typed button { font: inherit; padding: 12px 16px; border-radius: 12px; border: 0; background: #1f3346; color: #e8ecf1; }
+  .note { color: #8fa3b8; font-size: 13px; margin-top: 8px; }
+  a { color: #31c4f3; }
+</style>
+<main>
+  <div class="bar"><b>Alexa+ · simulated</b> <span id="auth">not connected</span></div>
+  <p class="note">This page stands in for the Alexa+ app during the hackathon (the real MCP Toolkit is partner-only). Voice comes from the browser's speech recognition, the language model on Amazon Bedrock picks a tool, the call goes over MCP (2025-11-25, Streamable HTTP) with an OAuth 2.1 PKCE token, and the television reacts within a second.</p>
+  <div id="log"></div>
+  <form class="typed" id="typed"><input id="text" placeholder="…or type: tell Vita Heart I took the morning ones" autocomplete="off"><button>Send</button></form>
+  <button class="mic" id="mic" title="Hold to talk">🎤</button>
+</main>
+<script>
+  const api = location.origin; const $ = id => document.getElementById(id);
+  const CLIENT = 'vita-heart-alexa'; const REDIRECT = api + '/alexa-sim';
+  const b64url = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  async function pkceStart() {
+    const verifier = b64url(crypto.getRandomValues(new Uint8Array(48)));
+    sessionStorage.setItem('pkce_verifier', verifier);
+    const challenge = b64url(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)));
+    location.href = api + '/oauth/authorize?' + new URLSearchParams({client_id: CLIENT, redirect_uri: REDIRECT, code_challenge: challenge, code_challenge_method: 'S256', state: 'sim', scope: 'household', response_type: 'code'});
+  }
+  async function pkceFinish(code) {
+    const verifier = sessionStorage.getItem('pkce_verifier');
+    const r = await fetch(api + '/oauth/token', {method: 'POST', headers: {'content-type': 'application/x-www-form-urlencoded'},
+      body: new URLSearchParams({grant_type: 'authorization_code', code, code_verifier: verifier, client_id: CLIENT, redirect_uri: REDIRECT})});
+    const j = await r.json(); if (j.access_token) { sessionStorage.setItem('token', j.access_token); history.replaceState({}, '', '/alexa-sim'); }
+  }
+  function token() { return sessionStorage.getItem('token'); }
+  function say(cls, html) { const d = document.createElement('div'); d.className = 'turn'; d.innerHTML = `<div class="${cls}">${html}</div>`; $('log').appendChild(d); d.scrollIntoView({behavior: 'smooth'}); }
+  async function turn(utterance) {
+    if (!token()) { await pkceStart(); return; }
+    say('you', utterance);
+    const r = await fetch(api + '/alexa-sim/turn', {method: 'POST', headers: {'content-type': 'application/json', 'authorization': 'Bearer ' + token()}, body: JSON.stringify({utterance})});
+    if (r.status === 401) { sessionStorage.removeItem('token'); $('auth').textContent = 'not connected'; await pkceStart(); return; }
+    const j = await r.json();
+    say('alexa', `${j.tool ? `<div class="tool">MCP · ${j.tool}${j.ms ? ` · ${j.ms} ms` : ''}</div>` : ''}${j.speech}${j.card ? `<div class="card">${j.card}</div>` : ''}`);
+    if ('speechSynthesis' in window && j.speech) { const u = new SpeechSynthesisUtterance(j.speech); u.lang = 'en-US'; speechSynthesis.speak(u); }
+  }
+  $('typed').addEventListener('submit', e => { e.preventDefault(); const t = $('text').value.trim(); if (t) { $('text').value = ''; turn(t); } });
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (SR) {
+    const rec = new SR(); rec.lang = 'en-US'; rec.interimResults = false;
+    rec.onresult = e => turn(e.results[0][0].transcript);
+    rec.onend = () => $('mic').classList.remove('listening');
+    $('mic').addEventListener('click', () => { $('mic').classList.add('listening'); rec.start(); });
+  } else { $('mic').disabled = true; $('mic').title = 'Speech recognition is not available in this browser; type instead.'; }
+  const code = new URLSearchParams(location.search).get('code');
+  (async () => { if (code) await pkceFinish(code); $('auth').textContent = token() ? 'connected to household via OAuth 2.1 PKCE' : 'not connected · first message opens the consent page'; })();
+</script>

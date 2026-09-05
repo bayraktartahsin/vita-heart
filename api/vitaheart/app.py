@@ -491,3 +491,25 @@ class _McpAuth:
 
 # The deployable ASGI app: /mcp goes to the MCP server behind bearer auth, everything else to FastAPI.
 asgi = _McpAuth(_mcp.asgi_app, app)
+
+
+# ---- the simulated Alexa+ surface ----------------------------------------------------------
+
+@app.get("/alexa-sim", response_class=HTMLResponse)
+def alexa_sim_page() -> str:
+    return (_WEB / "alexa-sim.html").read_text(encoding="utf-8")
+
+
+class TurnIn(BaseModel):
+    utterance: str = Field(min_length=1, max_length=400)
+
+
+@app.post("/alexa-sim/turn")
+def alexa_sim_turn(body: TurnIn, request: Request) -> dict:
+    """One turn: bearer token (from the PKCE flow the page ran) -> household -> model picks a tool -> MCP tool runs."""
+    auth = request.headers.get("authorization", "")
+    household = _oauth.household_for(auth[7:] if auth.lower().startswith("bearer ") else None)
+    if not household:
+        raise HTTPException(401, "connect first")
+    from alexa import sim
+    return sim.turn(household, body.utterance)
