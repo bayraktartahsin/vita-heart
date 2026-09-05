@@ -11,6 +11,7 @@ type Props = {
   error: string | null;
   live: LiveState;
   onCheckin: () => void;
+  onOpenMeds: () => void;
   checkinPending: boolean;
 };
 
@@ -18,7 +19,7 @@ type Props = {
  * The first thing the television shows. Four things only: a greeting, what is
  * due, one line from the family, and one big button. Everything else waits.
  */
-export function MorningBoard({board, error, live, onCheckin, checkinPending}: Props) {
+export function MorningBoard({board, error, live, onCheckin, onOpenMeds, checkinPending}: Props) {
   if (error) {
     return (
       <View style={styles.center} testID="board-error">
@@ -34,7 +35,8 @@ export function MorningBoard({board, error, live, onCheckin, checkinPending}: Pr
       </View>
     );
   }
-  const due = board.dueDoses.length;
+  const open = board.dueDoses.filter(d => !d.confirmed);
+  const due = open.length;
   return (
     <View style={styles.root} testID="morning-board">
       <View style={styles.header}>
@@ -44,8 +46,15 @@ export function MorningBoard({board, error, live, onCheckin, checkinPending}: Pr
 
       <View style={styles.row}>
         <Card title="Today" style={styles.grow} testID="card-today">
-          <Text style={styles.h1}>{due === 0 ? 'Nothing due right now' : `${due} to take`}</Text>
-          <Text style={styles.body}>Medication reminders arrive here once the boxes are photographed.</Text>
+          <Text style={styles.h1}>{due === 0 ? 'Nothing due right now' : due === 1 ? 'One to take' : `${due} to take`}</Text>
+          {due === 0 ? (
+            <Text style={styles.body}>{board.dueDoses.length ? 'Everything due has been taken.' : 'Medication reminders arrive here once the boxes are photographed.'}</Text>
+          ) : (
+            <>
+              <Text style={styles.body}>{open.map(d => d.name ?? 'a box').join(', ')}</Text>
+              <BigButton label="Show me" tone="calm" onPress={onOpenMeds} testID="open-meds" />
+            </>
+          )}
         </Card>
         <Card title="Resting heart rate" testID="card-hr">
           <Text style={[styles.hero, {color: color.heart}]}>{board.restingHeartRate ?? '—'}</Text>

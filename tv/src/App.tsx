@@ -2,14 +2,15 @@ import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {StyleSheet, Text, View} from 'react-native';
 // eslint-disable-next-line @amazon-devices/kepler/sdl-package-version-check-imports -- system library, understood
 import {TVFocusGuideView} from '@amazon-devices/react-native-kepler';
-import {ApiError, Board, LiveEvent, VitaHeartApi} from './api/client';
+import {ApiError, Board, Dose, LiveEvent, VitaHeartApi} from './api/client';
 import {API_BASE_URL, DEFAULT_HOUSEHOLD} from './config';
 import {color, space, type} from './design/tokens';
 import {useLiveEvents} from './live/useLiveEvents';
+import {MedicationMoment} from './screens/MedicationMoment';
 import {MorningBoard} from './screens/MorningBoard';
 import {Pairing} from './screens/Pairing';
 
-type Screen = 'pairing' | 'board';
+type Screen = 'pairing' | 'board' | 'meds';
 
 type Props = {apiBaseUrl?: string; household?: string | null};
 
@@ -23,6 +24,7 @@ export const App = ({apiBaseUrl = API_BASE_URL, household: initialHousehold = DE
   const [board, setBoard] = useState<Board | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [checkinPending, setCheckinPending] = useState(false);
+  const [dosePending, setDosePending] = useState<string | null>(null);
 
   const api = useMemo(() => (household ? new VitaHeartApi(apiBaseUrl, household) : null), [apiBaseUrl, household]);
 
@@ -69,6 +71,24 @@ export const App = ({apiBaseUrl = API_BASE_URL, household: initialHousehold = DE
     }
   }, [api, refresh]);
 
+  const confirmDose = useCallback(
+    async (dose: Dose) => {
+      if (!api) {
+        return;
+      }
+      setDosePending(dose.id);
+      try {
+        await api.confirmDose(dose.id);
+        await refresh();
+      } catch (e) {
+        setError(e instanceof ApiError ? `${e.status}: ${e.message}` : String(e));
+      } finally {
+        setDosePending(null);
+      }
+    },
+    [api, refresh],
+  );
+
   return (
     <View style={styles.root}>
       <View style={styles.rail}>
@@ -84,8 +104,10 @@ export const App = ({apiBaseUrl = API_BASE_URL, household: initialHousehold = DE
               setScreen('board');
             }}
           />
+        ) : screen === 'meds' && board ? (
+          <MedicationMoment doses={board.dueDoses} onConfirm={confirmDose} onBack={() => setScreen('board')} pendingId={dosePending} />
         ) : (
-          <MorningBoard board={board} error={error} live={live} onCheckin={checkin} checkinPending={checkinPending} />
+          <MorningBoard board={board} error={error} live={live} onCheckin={checkin} onOpenMeds={() => setScreen('meds')} checkinPending={checkinPending} />
         )}
       </TVFocusGuideView>
     </View>

@@ -3,12 +3,28 @@
  * base URL, one household code. Errors surface as one plain sentence the
  * screen can show; nothing is swallowed.
  */
+export type Dose = {
+  id: string;
+  medId: string;
+  name: string | null;
+  strength: string | null;
+  slot: string;
+  food: string | null;
+  photo: string | null;
+  dueAt: string | null;
+  unscheduled: boolean;
+  confirmed: boolean;
+  recallCount: number;
+  status: string;
+};
+
 export type Board = {
   household: string;
   greeting: string;
   person: {name: string; age?: number};
   family: {name: string; relation?: string; city?: string}[];
-  dueDoses: unknown[];
+  dueDoses: Dose[];
+  clock: Record<string, string>;
   restingHeartRate?: number | null;
   message: {author: string; text: string; ts: string} | null;
   checkedInToday: boolean;
@@ -55,6 +71,13 @@ export class VitaHeartApi {
 
   events(since: string | undefined, waitSeconds = 20): Promise<{events: LiveEvent[]; cursor: string}> {
     return this.json(this.url('/events', {since, wait: waitSeconds}));
+  }
+
+  confirmDose(doseId: string): Promise<{id: string; ts: string}> {
+    return this.json(this.url('/doses/confirm'), {
+      method: 'POST',
+      body: JSON.stringify({household: this.household, dose_id: doseId, by: 'tv'}),
+    });
   }
 
   checkin(): Promise<{ts: string}> {

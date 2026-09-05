@@ -33,11 +33,12 @@ def test_clock_then_confirm(ddb, monkeypatch):
     b = c.get("/board", params={"household": "AHMET1"}).json()
     due = [d for d in b["dueDoses"] if not d["unscheduled"]]
     assert [d["slot"] for d in due] == ["morning"] and due[0]["confirmed"] is False
+    cursor = c.get("/events", params={"household": "AHMET1", "wait": 0}).json()["cursor"]
     r = c.post("/doses/confirm", json={"household": "AHMET1", "dose_id": due[0]["id"], "by": "remote"})
     assert r.status_code == 201
     b2 = c.get("/board", params={"household": "AHMET1"}).json()
     assert [d for d in b2["dueDoses"] if d["slot"] == "morning"][0]["confirmed"] is True
-    ev = c.get("/events", params={"household": "AHMET1", "wait": 0}).json()
+    ev = c.get("/events", params={"household": "AHMET1", "since": cursor, "wait": 0}).json()
     assert "dose" in [e["kind"] for e in ev["events"]]
 
 

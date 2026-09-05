@@ -30,8 +30,12 @@ def to_inn(printed_name: str | None) -> str | None:
     """Map a printed name to an INN, or return None when it is not in the table."""
     if not printed_name:
         return None
-    key = re.sub(r"[^a-zçğıöşü ]", " ", printed_name.lower()).split()
-    for word in key:
+    words = re.sub(r"[^a-zçğıöşü ]", " ", printed_name.lower()).split()
+    for word in words:
         if word in TO_INN:
             return TO_INN[word]
+    # Readers sometimes split a brand at a kerning gap ("CORA SPIN"); try adjacent pairs joined.
+    for a, b in zip(words, words[1:]):
+        if a + b in TO_INN:
+            return TO_INN[a + b]
     return None

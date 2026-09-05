@@ -6,7 +6,12 @@ const board = {
   household: 'AHMET1', greeting: 'Günaydın, Ahmet', person: {name: 'Ahmet', age: 72},
   family: [{name: 'Selin'}], dueDoses: [], restingHeartRate: 61,
   message: {author: 'Selin', text: 'Baba, akşam arayacağım.', ts: '2026-09-05T05:00:00+00:00'},
-  checkedInToday: false, localHour: 8, generatedAt: '2026-09-05T05:00:00',
+  checkedInToday: false, localHour: 8, generatedAt: '2026-09-05T05:00:00', clock: {},
+};
+
+const dose = {
+  id: '2026-09-05#morning#m1', medId: 'm1', name: 'PARACETAMOL', strength: '500 mg', slot: 'morning', food: 'with food',
+  photo: null, dueAt: '2026-09-05T05:00', unscheduled: false, confirmed: false, recallCount: 1, status: 'identified',
 };
 
 type Init = {method?: string; body?: string};
@@ -41,6 +46,27 @@ describe('Vita Heart TV', () => {
       fireEvent.press(screen.getByTestId('checkin'));
     });
     await waitFor(() => expect(screen.getByTestId('checked-in')).toBeTruthy());
+  });
+
+  it('opens the medication moment and confirms a dose from the remote', async () => {
+    let confirmed = false;
+    mockFetch({
+      '/board': () => ({...board, dueDoses: [{...dose, confirmed}]}),
+      '/events': () => new Promise(() => {}),
+      '/doses/confirm': () => {
+        confirmed = true;
+        return {id: dose.id, ts: 'now'};
+      },
+    });
+    render(<App apiBaseUrl="https://api.test" household="AHMET1" />);
+    await waitFor(() => expect(screen.getByTestId('open-meds')).toBeTruthy());
+    fireEvent.press(screen.getByTestId('open-meds'));
+    expect(screen.getByTestId('medication-moment')).toBeTruthy();
+    expect(screen.getByText(/Ask the pharmacist/)).toBeTruthy();
+    await act(async () => {
+      fireEvent.press(screen.getByTestId(`confirm-${dose.id}`));
+    });
+    await waitFor(() => expect(screen.getByText('✓ Taken')).toBeTruthy());
   });
 
   it('says plainly when the API is unreachable', async () => {

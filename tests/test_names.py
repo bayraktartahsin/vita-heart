@@ -5,6 +5,7 @@ def test_turkish_brands_map_to_inn():
     assert names.to_inn("PARACETAMOL") == "acetaminophen"
     assert names.to_inn("Coraspin 100 mg") == "aspirin"
     assert names.to_inn("Delix 5 mg tablet") == "ramipril"
+    assert names.to_inn("CORA SPIN 100 mg") == "aspirin"     # split at a kerning gap by the reader
 
 
 def test_unknown_names_are_not_guessed():

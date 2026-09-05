@@ -12,8 +12,11 @@ from __future__ import annotations
 
 import time
 
+from pathlib import Path
+
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
 from . import __version__, board, config, store
@@ -116,10 +119,14 @@ def upload_url(body: UploadUrlIn) -> dict:
     bucket = os.environ.get("VITAHEART_BUCKET")
     if not bucket:
         raise HTTPException(503, "photo storage is not configured on this deployment")
+    from botocore.config import Config
+
     ext = "jpg" if body.content_type == "image/jpeg" else "png"
     key = f"{body.household.upper()}/{uuid.uuid4().hex}.{ext}"
-    url = boto3.client("s3", region_name=config.REGION).generate_presigned_url(
-        "put_object", Params={"Bucket": bucket, "Key": key, "ContentType": body.content_type}, ExpiresIn=600)
+    # Regional endpoint + SigV4, otherwise the phone gets a 307 to the regional host and PUT fails.
+    s3 = boto3.client("s3", region_name=config.REGION, endpoint_url=f"https://s3.{config.REGION}.amazonaws.com",
+                      config=Config(signature_version="s3v4", s3={"addressing_style": "virtual"}))
+    url = s3.generate_presigned_url("put_object", Params={"Bucket": bucket, "Key": key, "ContentType": body.content_type}, ExpiresIn=600)
     return {"url": url, "key": key, "expiresIn": 600}
 
 
@@ -139,7 +146,10 @@ def read_photo(body: ReadIn) -> dict:
     bucket = os.environ.get("VITAHEART_BUCKET")
     if not bucket or not body.key.startswith(body.household.upper() + "/"):
         raise HTTPException(400, "that photo does not belong to this household")
-    obj = boto3.client("s3", region_name=config.REGION).get_object(Bucket=bucket, Key=body.key)
+    try:
+        obj = boto3.client("s3", region_name=config.REGION).get_object(Bucket=bucket, Key=body.key)
+    except boto3.client("s3", region_name=config.REGION).exceptions.NoSuchKey:
+        raise HTTPException(404, "that photo was never uploaded; try again")
     data = obj["Body"].read()
     fmt = "png" if body.key.endswith(".png") else "jpeg"
     return meds.read_photo(body.household, data, fmt, photo_key=body.key)
@@ -178,3 +188,14 @@ def set_clock(body: ClockIn) -> dict:
         raise HTTPException(422, f"unknown slot(s): {bad}")
     store.set_clock(body.household, body.times)
     return {"clock": body.times}
+
+
+# ---- phone-facing pages ---------------------------------------------------------------
+
+_WEB = Path(__file__).parent / "web"
+
+
+@app.get("/cabinet", response_class=HTMLResponse)
+def cabinet_page() -> str:
+    """The family's phone page: photograph the boxes. Served by the API so there is one origin."""
+    return (_WEB / "cabinet.html").read_text(encoding="utf-8")
