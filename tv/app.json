@@ -1,5 +1,5 @@
 {
   "//": "The declared app name must follow this pattern to be KRL-compatible",
-  "name": "com.gravitilabs.vitahearth.main",
-  "displayName": "VitaHearthTV"
+  "name": "com.gravitilabs.vitaheart.main",
+  "displayName": "VitaHeartTV"
 }

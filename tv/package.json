@@ -1,5 +1,5 @@
 {
-  "name": "@amazon-devices/vitahearthtv",
+  "name": "@amazon-devices/vitahearttv",
   "version": "0.0.1",
   "private": true,
   "files": ["dist"],
@@ -50,7 +50,7 @@
   },
   "kepler": {
     "projectType": "application",
-    "appName": "VitaHearthTV",
+    "appName": "VitaHeartTV",
     "targets": ["tv"]
   }
 }
