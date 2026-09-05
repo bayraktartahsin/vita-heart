@@ -205,7 +205,7 @@ def cabinet_page() -> str:
 
 class SessionStartIn(BaseModel):
     household: str = Field(min_length=4, max_length=12)
-    source: str = Field(default="watch", pattern="^(watch|recorded)$")
+    source: str = Field(default="watch", pattern="^(watch|recorded|synthetic)$")   # the TV labels anything not "watch"
 
 
 @app.post("/session/start", status_code=201)
@@ -256,3 +256,28 @@ def session_live(household: str = Query(..., min_length=4, max_length=12)) -> di
     _profile_or_404(household)
     live = store.live_session(household)
     return {"live": live}
+
+
+class CoachIn(BaseModel):
+    household: str = Field(min_length=4, max_length=12)
+    numbers: dict
+
+
+@app.post("/session/coach")
+def session_coach(body: CoachIn) -> dict:
+    """One encouraging line from the Coach agent for the current block. Never a claim, never a number it was not given."""
+    import sys
+    from pathlib import Path
+
+    for cand in (Path(__file__).resolve().parents[1], Path(__file__).resolve().parents[2]):
+        if (cand / "agents").is_dir() and str(cand) not in sys.path:
+            sys.path.insert(0, str(cand))
+    from agents import client
+
+    _profile_or_404(body.household)
+    try:
+        line = client.coach_line(body.numbers)
+    except Exception as e:  # noqa: BLE001  the session must never depend on the model
+        line = ""
+        return {"line": line, "fallback": True, "reason": type(e).__name__}
+    return {"line": line, "fallback": False}

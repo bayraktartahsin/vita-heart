@@ -93,6 +93,39 @@ describe('Vita Heart TV', () => {
     await waitFor(() => expect(screen.queryByTestId('set-clock')).toBeNull());
   });
 
+  it('runs a heart session: starts it, shows live wrist samples with their source, finishes', async () => {
+    jest.useFakeTimers();
+    let poll: ((v: unknown) => void) | null = null;
+    mockFetch({
+      '/board': () => board,
+      '/events': () => new Promise(resolve => {
+        poll = resolve;
+      }),
+      '/session/start': () => ({id: 'sess123456', source: 'watch'}),
+      '/session/coach': () => ({line: 'Nice and easy.', fallback: false}),
+      '/session/finish': () => ({id: 'sess123456'}),
+    });
+    render(<App apiBaseUrl="https://api.test" household="AHMET1" />);
+    await waitFor(() => expect(screen.getByTestId('start-session')).toBeTruthy());
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('start-session'));
+    });
+    expect(screen.getByTestId('heart-session')).toBeTruthy();
+    expect(screen.getByTestId('bpm').props.children).toBe('—');
+    // A wrist sample arrives on the events channel.
+    await act(async () => {
+      poll!({events: [{ts: '1', kind: 'hr', data: {session: 'sess123456', bpm: 88}}], cursor: '1'});
+    });
+    await waitFor(() => expect(screen.getByTestId('bpm').props.children).toBe(88));
+    expect(screen.getByText('live from your Watch')).toBeTruthy();
+    // Two seconds of the engine.
+    await act(async () => {
+      jest.advanceTimersByTime(2000);
+    });
+    expect(screen.getByTestId('clock').props.children).toBe('1:58');
+    jest.useRealTimers();
+  });
+
   it('says plainly when the API is unreachable', async () => {
     mockFetch({'/events': () => new Promise(() => {})});
     render(<App apiBaseUrl="https://api.test" household="NOBODY" />);

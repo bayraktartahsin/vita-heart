@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {StyleSheet, Text, View} from 'react-native';
 // eslint-disable-next-line @amazon-devices/kepler/sdl-package-version-check-imports -- system library, understood
 import {TVFocusGuideView} from '@amazon-devices/react-native-kepler';
@@ -7,11 +7,13 @@ import {API_BASE_URL, DEFAULT_HOUSEHOLD} from './config';
 import {color, space, type} from './design/tokens';
 import {useLiveEvents} from './live/useLiveEvents';
 import {ClockSetup, Slot} from './screens/ClockSetup';
+import {HeartSession, SessionSource} from './screens/HeartSession';
+import {SessionState, current, start as startEngine, summarize} from './session/engine';
 import {MedicationMoment} from './screens/MedicationMoment';
 import {MorningBoard} from './screens/MorningBoard';
 import {Pairing} from './screens/Pairing';
 
-type Screen = 'pairing' | 'board' | 'meds' | 'clock';
+type Screen = 'pairing' | 'board' | 'meds' | 'clock' | 'session';
 
 type Props = {apiBaseUrl?: string; household?: string | null};
 
@@ -27,6 +29,11 @@ export const App = ({apiBaseUrl = API_BASE_URL, household: initialHousehold = DE
   const [checkinPending, setCheckinPending] = useState(false);
   const [dosePending, setDosePending] = useState<string | null>(null);
   const [clockPending, setClockPending] = useState(false);
+  const [session, setSession] = useState<{id: string; source: SessionSource; state: SessionState} | null>(null);
+  const [latestBpm, setLatestBpm] = useState<number | null>(null);
+  const [coachLine, setCoachLine] = useState('');
+  const sessionRef = useRef(session);
+  sessionRef.current = session;
 
   const api = useMemo(() => (household ? new VitaHeartApi(apiBaseUrl, household) : null), [apiBaseUrl, household]);
 
@@ -50,8 +57,11 @@ export const App = ({apiBaseUrl = API_BASE_URL, household: initialHousehold = DE
     (e: LiveEvent) => {
       // Every event kind that changes what the board shows triggers a refetch.
       // Cheap, correct, and it keeps one source of truth: the API.
-      if (['message', 'checkin', 'dose', 'board'].includes(e.kind)) {
+      if (['message', 'checkin', 'dose', 'board', 'med'].includes(e.kind)) {
         refresh();
+      }
+      if (e.kind === 'hr' && sessionRef.current && e.data.session === sessionRef.current.id) {
+        setLatestBpm(Number(e.data.bpm));
       }
     },
     [refresh],
@@ -110,6 +120,59 @@ export const App = ({apiBaseUrl = API_BASE_URL, household: initialHousehold = DE
     [api, refresh],
   );
 
+  const startSession = useCallback(
+    async (source: SessionSource) => {
+      if (!api || !board) {
+        return;
+      }
+      try {
+        const {id} = await api.startSession(source);
+        setLatestBpm(null);
+        setCoachLine(source === 'watch' ? 'Start the Vita Heart app on your Watch when you are ready.' : 'Sit comfortably. We begin gently.');
+        setSession({id, source, state: startEngine(board.person.age ?? 70)});
+        setScreen('session');
+      } catch (e) {
+        setError(e instanceof ApiError ? `${e.status}: ${e.message}` : String(e));
+      }
+    },
+    [api, board],
+  );
+
+  const onSessionTick = useCallback(
+    (next: SessionState) => {
+      setSession(prev => (prev ? {...prev, state: next} : prev));
+      // A new block: ask the Coach for one line. Never block the session on it.
+      const prevPhase = sessionRef.current ? current(sessionRef.current.state).phase : null;
+      const nextPhase = current(next).phase;
+      if (api && prevPhase !== nextPhase && nextPhase !== 'done') {
+        const last = next.samples[next.samples.length - 1];
+        api
+          .coach({phase: nextPhase, elapsedSeconds: next.elapsed, lastBpm: last?.bpm ?? null, zone: next.zones, adaptations: next.adaptations.map(a => a.kind)})
+          .then(r => r.line && setCoachLine(r.line))
+          .catch(() => {});
+      }
+    },
+    [api],
+  );
+
+  const onSessionFinish = useCallback(
+    (final: SessionState) => {
+      if (api && sessionRef.current) {
+        api.finishSession(sessionRef.current.id, summarize(final) as unknown as Record<string, unknown>).catch(() => {});
+      }
+    },
+    [api],
+  );
+
+  const stopSession = useCallback(() => {
+    if (api && sessionRef.current && !sessionRef.current.state.finished) {
+      api.finishSession(sessionRef.current.id, {...summarize(sessionRef.current.state), stoppedEarly: true}).catch(() => {});
+    }
+    setSession(null);
+    setScreen('board');
+    refresh();
+  }, [api, refresh]);
+
   const slotsNeeded = Array.from(new Set((board?.dueDoses ?? []).map(d => d.slot))) as Slot[];
 
   return (
@@ -127,12 +190,14 @@ export const App = ({apiBaseUrl = API_BASE_URL, household: initialHousehold = DE
               setScreen('board');
             }}
           />
+        ) : screen === 'session' && session ? (
+          <HeartSession state={session.state} onTick={onSessionTick} latestBpm={latestBpm} source={session.source} coachLine={coachLine} onFinish={onSessionFinish} onStop={stopSession} />
         ) : screen === 'clock' && board ? (
           <ClockSetup slotsNeeded={slotsNeeded} initial={board.clock} onConfirm={saveClock} onBack={() => setScreen('meds')} pending={clockPending} />
         ) : screen === 'meds' && board ? (
           <MedicationMoment doses={board.dueDoses} onConfirm={confirmDose} onBack={() => setScreen('board')} onSetClock={() => setScreen('clock')} pendingId={dosePending} />
         ) : (
-          <MorningBoard board={board} error={error} live={live} onCheckin={checkin} onOpenMeds={() => setScreen('meds')} checkinPending={checkinPending} />
+          <MorningBoard board={board} error={error} live={live} onCheckin={checkin} onOpenMeds={() => setScreen('meds')} onStartSession={startSession} checkinPending={checkinPending} />
         )}
       </TVFocusGuideView>
     </View>

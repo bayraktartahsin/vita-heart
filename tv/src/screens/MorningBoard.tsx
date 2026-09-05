@@ -2,6 +2,7 @@ import React from 'react';
 import {StyleSheet, Text, View} from 'react-native';
 import type {Board} from '../api/client';
 import type {LiveState} from '../live/useLiveEvents';
+import type {SessionSource} from './HeartSession';
 import {BigButton} from '../components/BigButton';
 import {Card} from '../components/Card';
 import {color, space, type} from '../design/tokens';
@@ -12,6 +13,7 @@ type Props = {
   live: LiveState;
   onCheckin: () => void;
   onOpenMeds: () => void;
+  onStartSession: (source: SessionSource) => void;
   checkinPending: boolean;
 };
 
@@ -19,7 +21,7 @@ type Props = {
  * The first thing the television shows. Four things only: a greeting, what is
  * due, one line from the family, and one big button. Everything else waits.
  */
-export function MorningBoard({board, error, live, onCheckin, onOpenMeds, checkinPending}: Props) {
+export function MorningBoard({board, error, live, onCheckin, onOpenMeds, onStartSession, checkinPending}: Props) {
   if (error) {
     return (
       <View style={styles.center} testID="board-error">
@@ -62,9 +64,15 @@ export function MorningBoard({board, error, live, onCheckin, onOpenMeds, checkin
         </Card>
       </View>
 
-      <Card title={board.message ? `From ${board.message.author}` : 'Family'} testID="card-message">
-        <Text style={styles.h2}>{board.message ? board.message.text : 'No new message.'}</Text>
-      </Card>
+      <View style={styles.row}>
+        <Card title={board.message ? `From ${board.message.author}` : 'Family'} style={styles.grow} testID="card-message">
+          <Text style={styles.h2}>{board.message ? board.message.text : 'No new message.'}</Text>
+        </Card>
+        <Card title="Ten minutes, seated" testID="card-session">
+          <Text style={styles.body}>Your heart rate from the Watch shows here while you move.</Text>
+          <BigButton label="Start with my Watch" tone="calm" onPress={() => onStartSession('watch')} testID="start-session" />
+        </Card>
+      </View>
 
       <View style={styles.actions}>
         {board.checkedInToday ? (

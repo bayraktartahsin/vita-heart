@@ -87,6 +87,18 @@ export class VitaHeartApi {
     });
   }
 
+  startSession(source: 'watch' | 'recorded' | 'synthetic'): Promise<{id: string; source: string}> {
+    return this.json(this.url('/session/start'), {method: 'POST', body: JSON.stringify({household: this.household, source})});
+  }
+
+  finishSession(session: string, summary: Record<string, unknown>): Promise<{id: string}> {
+    return this.json(this.url('/session/finish'), {method: 'POST', body: JSON.stringify({household: this.household, session, summary})});
+  }
+
+  coach(numbers: Record<string, unknown>): Promise<{line: string; fallback: boolean}> {
+    return this.json(this.url('/session/coach'), {method: 'POST', body: JSON.stringify({household: this.household, numbers})});
+  }
+
   checkin(): Promise<{ts: string}> {
     return this.json(this.url('/checkin'), {
       method: 'POST',
