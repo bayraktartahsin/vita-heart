@@ -43,6 +43,7 @@ def step(msg): print(f"• {msg}", flush=True)
 
 
 def main() -> None:
+    due_now = "--due-now" in sys.argv
     py = sys.executable
     step("reset"); subprocess.run([py, str(ROOT / "scripts/reset_demo.py")], check=True, capture_output=True)
     for lines in (["CORASPIN 100 mg", "30 enterik tablet", "Günde 1 kez, sabah", "LOT 25A007"],
@@ -54,7 +55,17 @@ def main() -> None:
         r = httpx.post(f"{API}/meds/read", json={"household": HH, "key": up["key"]}, timeout=120).json()
         for m in r["meds"]:
             step(f"read {lines[0]} -> {m['status']} {m.get('name')} = {(m.get('identity') or {}).get('name')} ({len(m['recalls'])} recalls, slots {m['directions']['slots']}) in {time.time()-t:.1f}s on {r.get('ran_on')}")
-    step("clock"); httpx.post(f"{API}/clock", json={"household": HH, "times": {"morning": "08:00", "evening": "19:00"}}, timeout=30).raise_for_status()
+    if due_now:
+        # Recording outside the morning: put the "morning" slot on the current Istanbul time, rounded down to
+        # the half hour, so the dose is due while the camera runs. The board still says "Morning"; the video
+        # narration says the clock was set for the recording.
+        from datetime import datetime, timedelta, timezone
+        ist = datetime.now(timezone.utc) + timedelta(hours=3)
+        morning = f"{ist.hour:02d}:{(ist.minute // 30) * 30:02d}"
+        times = {"morning": morning, "evening": "19:00"}
+    else:
+        times = {"morning": "08:00", "evening": "19:00"}
+    step(f"clock {times}"); httpx.post(f"{API}/clock", json={"household": HH, "times": times}, timeout=30).raise_for_status()
     step("ring night scenario"); subprocess.run([py, str(ROOT / "scripts/ring_simulate.py"), "night"], check=True, capture_output=True)
     step("night watch"); out = httpx.post(f"{API}/night/run", json={"household": HH, "notify": False}, timeout=120).json()
     print("  ", out["text"])
