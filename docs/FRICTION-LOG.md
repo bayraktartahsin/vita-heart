@@ -52,3 +52,18 @@ Severity: blocker / high / medium / low. Dates are 2026.
 ## 8. Builder Tools `init-context --agent claude-code-cli` reports one installed skill (5 Sep)
 - Actual: summary lists `vega-multi-tv-migration` only; unclear whether other skills exist for this agent or were skipped.
 - Severity: low. Suggestion: list every skill considered and why each was or was not installed.
+
+## 9. DynamoDB refuses Python floats; the error surfaces as a 500 two layers up (5 Sep)
+- Task: store a Ring temperature reading (16.8) as a signal. Actual: `Float types are not supported. Use Decimal types instead` inside boto3, a 500 to Ring's webhook. Severity: medium for anyone new to DynamoDB. Workaround: a `storable()` conversion at the store boundary. Suggestion (AWS): let the resource layer accept floats with a documented precision, or make the error name the offending attribute.
+
+## 10. Bedrock AgentCore starter toolkit is deprecated on install, docs still point to it (5 Sep)
+- `pip install bedrock-agentcore-starter-toolkit` prints a deprecation notice pointing to the new `@aws/agentcore` CLI, while the Runtime docs and samples still show `agentcore configure/deploy`. Both work; a newcomer does not know which to trust. Severity: low. Suggestion: one dated migration note at the top of the Runtime quick start.
+
+## 11. AgentCore direct code deploy: a `-rf` requirements path outside the project root is silently ignored (5 Sep)
+- Task: `agentcore configure -rf agents/requirements.txt`. Actual: first runtime start failed with `No module named 'bedrock_agentcore'`; moving the file to `./requirements.txt` fixed it. Severity: high (a silent packaging miss becomes a runtime failure minutes later). Suggestion: fail at configure time if the requirements file will not be packaged, and print which file was used in the deploy summary.
+
+## 12. Ring webhook payload schema is not in the public docs (5 Sep)
+- The API reference names the `X-Signature` header and `sha256=<hex>` HMAC, and lists event type names, but no example body for sensor events (contact, temperature, air quality). Severity: medium (sensor use cases are a stated priority). Workaround: a tolerant normaliser. Suggestion: one JSON example per event type, and a "send test event" button in the Playground.
+
+## 13. Alexa+ MCP contract vs the MCP SDK defaults (5 Sep)
+- The Alexa+ docs require a bare 401 for anonymous calls; the Python MCP SDK's auth middleware returns 401 with `WWW-Authenticate` per RFC 9728, and its transport security guard returns 421 for any non-localhost Host. Neither is wrong; they disagree. Severity: medium. Suggestion (Alexa docs): state whether RFC 9728 headers are tolerated; (SDK): mention the host guard in the Streamable HTTP deployment notes.
