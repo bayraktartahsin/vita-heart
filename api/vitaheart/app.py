@@ -438,21 +438,29 @@ class _McpAuth:
         self._task = None
         self._loop = None
 
-    async def _runner(self):
+    async def _runner(self, manager, ready):
         # Hold the session manager open in one long-lived task; entering it inside a request
         # task and leaving it in another breaks anyio's cancel scopes.
-        async with _mcp.server.session_manager.run():
-            self._ready.set()
-            await asyncio.Event().wait()
+        try:
+            async with manager.run():
+                ready.set()
+                await asyncio.Event().wait()
+        except Exception:  # noqa: BLE001
+            import logging
+            logging.getLogger("vitaheart.mcp").exception("MCP session manager stopped")
+            ready.set()   # never leave a request waiting forever
 
     async def _ensure_started(self):
         # FastMCP's session manager normally starts with the Starlette lifespan. This app is
         # dispatched by hand and runs on Lambda with lifespans off, so start it on first use.
         loop = asyncio.get_running_loop()
         if self._ready is None or self._loop is not loop:   # first use, or a new event loop (tests, reloads)
+            # A StreamableHTTPSessionManager runs once per instance, so each loop gets a fresh app + manager.
             self._loop = loop
+            srv = _mcp.build_server()
+            self.inner = srv.streamable_http_app()
             self._ready = asyncio.Event()
-            self._task = loop.create_task(self._runner())
+            self._task = loop.create_task(self._runner(srv.session_manager, self._ready))
         await self._ready.wait()
 
     async def __call__(self, scope, receive, send):
