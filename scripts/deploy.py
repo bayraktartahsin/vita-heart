@@ -33,6 +33,7 @@ FUNCTION = "vitaheart-api"
 ROLE = "vitaheart-lambda"
 TABLE = "vitaheart"
 API_NAME = "vitaheart"
+BUCKET_PREFIX = "vitaheart-photos-"
 BUILD = ROOT / ".build"
 
 DEPS = ["fastapi==0.141.1", "mangum==0.22.0", "pydantic==2.12.5", "httpx==0.28.1"]
@@ -49,6 +50,8 @@ def policy(account: str) -> dict:
         {"Effect": "Allow", "Resource": "*",
          "Action": ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream",
                     "bedrock-agentcore:InvokeAgentRuntime"]},
+        {"Effect": "Allow", "Resource": [f"arn:aws:s3:::{BUCKET_PREFIX}{account}", f"arn:aws:s3:::{BUCKET_PREFIX}{account}/*"],
+         "Action": ["s3:GetObject", "s3:PutObject", "s3:ListBucket"]},
         {"Effect": "Allow", "Resource": "arn:aws:logs:*:*:*",
          "Action": ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]},
     ]}
@@ -67,6 +70,7 @@ def build_zip() -> bytes:
                     "--platform", "manylinux2014_aarch64", "--implementation", "cp",
                     "--python-version", "3.12", "--only-binary=:all:", *DEPS], check=True)
     shutil.copytree(API_DIR / "vitaheart", BUILD / "vitaheart")
+    shutil.copytree(ROOT / "agents", BUILD / "agents", ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
         for p in BUILD.rglob("*"):
@@ -106,6 +110,23 @@ def ensure_table(ddb) -> None:
     say(f"created table {TABLE}")
 
 
+def ensure_bucket(s3, account: str) -> str:
+    """Private bucket for box photos. Objects expire after 30 days; the TV never needs old photos."""
+    name = f"{BUCKET_PREFIX}{account}"
+    try:
+        s3.head_bucket(Bucket=name)
+    except ClientError:
+        s3.create_bucket(Bucket=name, CreateBucketConfiguration={"LocationConstraint": REGION})
+        s3.put_public_access_block(Bucket=name, PublicAccessBlockConfiguration={
+            "BlockPublicAcls": True, "IgnorePublicAcls": True, "BlockPublicPolicy": True, "RestrictPublicBuckets": True})
+        s3.put_bucket_lifecycle_configuration(Bucket=name, LifecycleConfiguration={"Rules": [
+            {"ID": "expire-photos", "Status": "Enabled", "Filter": {"Prefix": ""}, "Expiration": {"Days": 30}}]})
+        s3.put_bucket_cors(Bucket=name, CORSConfiguration={"CORSRules": [
+            {"AllowedOrigins": ["*"], "AllowedMethods": ["PUT", "GET"], "AllowedHeaders": ["*"], "MaxAgeSeconds": 3600}]})
+        say(f"created bucket {name}")
+    return name
+
+
 def _wait(lam) -> None:
     for _ in range(60):
         st = lam.get_function_configuration(FunctionName=FUNCTION)
@@ -114,8 +135,8 @@ def _wait(lam) -> None:
         time.sleep(2)
 
 
-def ensure_function(lam, role_arn: str, code: bytes) -> None:
-    env = {"Variables": {"VITAHEART_TABLE": TABLE, "VITAHEART_REGION": REGION}}
+def ensure_function(lam, role_arn: str, code: bytes, bucket: str) -> None:
+    env = {"Variables": {"VITAHEART_TABLE": TABLE, "VITAHEART_REGION": REGION, "VITAHEART_BUCKET": bucket}}
     try:
         lam.get_function(FunctionName=FUNCTION)
         lam.update_function_code(FunctionName=FUNCTION, ZipFile=code, Architectures=["arm64"])
@@ -159,8 +180,9 @@ def main(infra_only: bool) -> None:
     iam, ddb, lam = session.client("iam"), session.client("dynamodb"), session.client("lambda")
     role_arn = ensure_role(iam)
     ensure_table(ddb)
+    bucket = ensure_bucket(session.client("s3"), account)
     if not infra_only:
-        ensure_function(lam, role_arn, build_zip())
+        ensure_function(lam, role_arn, build_zip(), bucket)
     url = ensure_api(lam, account)
     (ROOT / "docs" / "URLS.md").write_text(f"# Live URLs\n\n- API: {url}\n- Health: {url}/health\n- Demo board: {url}/board?household=AHMET1\n")
     say(f"API: {url}")

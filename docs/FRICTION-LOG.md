@@ -24,6 +24,7 @@ Severity: blocker / high / medium / low. Dates are 2026.
 - Steps: added fetch calls; built; launched on the Virtual Device; watched the API's Lambda logs.
 - Expected: a request, or an error in the device log.
 - Actual: no request and no error line in `vega device start-log-stream`. The generated template has no `[wants]` section; the fix is only discoverable by reading Amazon's video sample manifest.
+- Verified by A/B: the same app built with the entry made 4 API calls in 45 s; built without it, 0 calls in 35 s, no error logged.
 - Severity: high for newcomers. Workaround: add `[[wants.service]] id = "com.amazon.network.service"`.
 - Suggestion: the helloWorld template should include the network service (commented out with one line of explanation), and the runtime should log a denied network call.
 

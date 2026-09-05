@@ -8,8 +8,11 @@ from moto import mock_aws
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "api"))
 os.environ.setdefault("AWS_DEFAULT_REGION", "eu-north-1")
-os.environ.setdefault("AWS_ACCESS_KEY_ID", "testing")
-os.environ.setdefault("AWS_SECRET_ACCESS_KEY", "testing")
+# Fake credentials keep moto-backed tests away from real AWS. Set VITAHEART_LIVE=1
+# to run the live tests (Bedrock, RxNorm, openFDA) with the local AWS profile.
+if not os.environ.get("VITAHEART_LIVE"):
+    os.environ.setdefault("AWS_ACCESS_KEY_ID", "testing")
+    os.environ.setdefault("AWS_SECRET_ACCESS_KEY", "testing")
 os.environ["VITAHEART_TABLE"] = "vitaheart-test"
 os.environ["VITAHEART_LONG_POLL_SECONDS"] = "0.5"
 

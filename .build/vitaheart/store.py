@@ -131,3 +131,37 @@ def checkin(code: str, by: str = "tv") -> dict[str, Any]:
 def checkin_today(code: str) -> dict[str, Any] | None:
     r = table().get_item(Key={"PK": _hh(code), "SK": f"CHECKIN#{today()}"})
     return r.get("Item")
+
+
+# ---- medicines and doses (Phase 2) -----------------------------------------------
+
+def put_med(code: str, med: dict[str, Any]) -> dict[str, Any]:
+    item = {"PK": _hh(code), "SK": f"MED#{med['id']}", **med, "updated": now_iso()}
+    table().put_item(Item=item)
+    emit(code, "med", {"id": med["id"], "name": med.get("name")})
+    return item
+
+
+def list_meds(code: str) -> list[dict[str, Any]]:
+    r = table().query(KeyConditionExpression=Key("PK").eq(_hh(code)) & Key("SK").begins_with("MED#"))
+    return [plain(i) for i in r.get("Items", [])]
+
+
+def confirm_dose(code: str, dose_id: str, by: str = "tv") -> dict[str, Any]:
+    ts = now_iso()
+    item = {"PK": _hh(code), "SK": f"DOSE#{dose_id}", "ts": ts, "by": by}
+    table().put_item(Item=item)
+    emit(code, "dose", {"id": dose_id, "ts": ts, "by": by})
+    return item
+
+
+def doses_confirmed(code: str, day: str) -> set[str]:
+    r = table().query(KeyConditionExpression=Key("PK").eq(_hh(code)) & Key("SK").begins_with(f"DOSE#{day}#"))
+    return {i["SK"][len("DOSE#"):] for i in r.get("Items", [])}
+
+
+def set_clock(code: str, times: dict[str, str]) -> None:
+    table().update_item(Key={"PK": _hh(code), "SK": "PROFILE"},
+                        UpdateExpression="SET clock = :c, updated = :u",
+                        ExpressionAttributeValues={":c": times, ":u": now_iso()})
+    emit(code, "board", {"clock": times})
