@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -34,6 +35,10 @@ ROLE = "vitaheart-lambda"
 TABLE = "vitaheart"
 API_NAME = "vitaheart"
 BUCKET_PREFIX = "vitaheart-photos-"
+TOPIC = "vitaheart-family"
+SCHEDULE = "vitaheart-night-watch"
+FAMILY_EMAIL = "info@gravitilabs.com"
+RING_KEYS = Path(os.environ.get("VITAHEART_RING_KEYS_FILE", Path.home() / "Documents/New Apps/Hackhaton/AmazonAppDev2026/keys-ring.env"))
 BUILD = ROOT / ".build"
 
 # strands is NOT bundled: the Lambda calls the fleet on AgentCore. Locally the fleet runs in-process.
@@ -53,6 +58,7 @@ def policy(account: str) -> dict:
                     "bedrock-agentcore:InvokeAgentRuntime"]},
         {"Effect": "Allow", "Resource": [f"arn:aws:s3:::{BUCKET_PREFIX}{account}", f"arn:aws:s3:::{BUCKET_PREFIX}{account}/*"],
          "Action": ["s3:GetObject", "s3:PutObject", "s3:ListBucket"]},
+        {"Effect": "Allow", "Resource": f"arn:aws:sns:{REGION}:{account}:{TOPIC}", "Action": ["sns:Publish"]},
         {"Effect": "Allow", "Resource": "arn:aws:logs:*:*:*",
          "Action": ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]},
     ]}
@@ -128,6 +134,39 @@ def ensure_bucket(s3, account: str) -> str:
     return name
 
 
+def ensure_topic(sns) -> str:
+    arn = sns.create_topic(Name=TOPIC)["TopicArn"]
+    subs = sns.list_subscriptions_by_topic(TopicArn=arn)["Subscriptions"]
+    if not any(x["Endpoint"] == FAMILY_EMAIL for x in subs):
+        sns.subscribe(TopicArn=arn, Protocol="email", Endpoint=FAMILY_EMAIL)
+        say(f"subscribed {FAMILY_EMAIL} to {TOPIC} (confirm the email once)")
+    return arn
+
+
+def ensure_schedule(events, lam, account: str) -> None:
+    """Night Watch at 21:00 Istanbul = 18:00 UTC, every day."""
+    fn_arn = f"arn:aws:lambda:{REGION}:{account}:function:{FUNCTION}"
+    events.put_rule(Name=SCHEDULE, ScheduleExpression="cron(0 18 * * ? *)", State="ENABLED",
+                    Description="Vita Heart Night Watch, 21:00 Istanbul")
+    events.put_targets(Rule=SCHEDULE, Targets=[{"Id": "vitaheart", "Arn": fn_arn, "Input": json.dumps({"source": "schedule"})}])
+    try:
+        lam.add_permission(FunctionName=FUNCTION, StatementId="eventbridge-night-watch", Action="lambda:InvokeFunction",
+                           Principal="events.amazonaws.com", SourceArn=f"arn:aws:events:{REGION}:{account}:rule/{SCHEDULE}")
+    except ClientError as e:
+        if "ResourceConflict" not in str(e):
+            raise
+
+
+def ring_hmac_key() -> str | None:
+    """Read from the founder's local keys file at deploy time; never printed, never committed."""
+    if not RING_KEYS.exists():
+        return None
+    for line in RING_KEYS.read_text().splitlines():
+        if line.startswith("RING_HMAC_SIGNATURE_KEY="):
+            return line.split("=", 1)[1].strip()
+    return None
+
+
 def _wait(lam) -> None:
     for _ in range(60):
         st = lam.get_function_configuration(FunctionName=FUNCTION)
@@ -147,8 +186,17 @@ def agentcore_arn() -> str | None:
     return None
 
 
-def ensure_function(lam, role_arn: str, code: bytes, bucket: str) -> None:
-    variables = {"VITAHEART_TABLE": TABLE, "VITAHEART_REGION": REGION, "VITAHEART_BUCKET": bucket}
+def ensure_function(lam, role_arn: str, code: bytes, bucket: str, topic_arn: str, public_url: str | None) -> None:
+    variables = {"VITAHEART_TABLE": TABLE, "VITAHEART_REGION": REGION, "VITAHEART_BUCKET": bucket,
+                 "VITAHEART_TOPIC_ARN": topic_arn}
+    if public_url:
+        variables["VITAHEART_PUBLIC_URL"] = public_url
+    hk = ring_hmac_key()
+    if hk:
+        variables["VITAHEART_RING_HMAC_KEY"] = hk
+        say("ring webhook key: set from the local keys file")
+    else:
+        say("ring webhook key: NOT set (keys file missing); /ring/webhook will refuse everything")
     arn = agentcore_arn()
     if arn:
         variables["VITAHEART_AGENT_ARN"] = arn
@@ -200,10 +248,17 @@ def main(infra_only: bool) -> None:
     role_arn = ensure_role(iam)
     ensure_table(ddb)
     bucket = ensure_bucket(session.client("s3"), account)
+    topic_arn = ensure_topic(session.client("sns"))
+    existing = [a for a in session.client("apigatewayv2").get_apis()["Items"] if a["Name"] == API_NAME]
+    public_url = existing[0]["ApiEndpoint"] if existing else None
     if not infra_only:
-        ensure_function(lam, role_arn, build_zip(), bucket)
+        ensure_function(lam, role_arn, build_zip(), bucket, topic_arn, public_url)
     url = ensure_api(lam, account)
-    (ROOT / "docs" / "URLS.md").write_text(f"# Live URLs\n\n- API: {url}\n- Health: {url}/health\n- Demo board: {url}/board?household=AHMET1\n")
+    ensure_schedule(session.client("events"), lam, account)
+    (ROOT / "docs" / "URLS.md").write_text(
+        f"# Live URLs\n\n- API: {url}\n- Health: {url}/health\n- Demo board: {url}/board?household=AHMET1\n"
+        f"- Family page: {url}/family?household=AHMET1\n- Add boxes (phone): {url}/cabinet?household=AHMET1\n"
+        f"- Ring webhook: {url}/ring/webhook?household=AHMET1 (X-Signature, HMAC-SHA256 hex)\n")
     say(f"API: {url}")
 
 

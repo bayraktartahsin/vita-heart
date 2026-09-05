@@ -50,6 +50,19 @@ def _hh(code: str) -> str:
     return f"HH#{code.upper()}"
 
 
+def storable(value: Any) -> Any:
+    """DynamoDB refuses Python floats; store them as Decimal (and walk nested data)."""
+    if isinstance(value, float):
+        return Decimal(str(value))
+    if isinstance(value, dict):
+        return {k: storable(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [storable(v) for v in value]
+    return value
+
+
+
+
 # ---- profile -----------------------------------------------------------------
 
 def plain(value: Any) -> Any:
@@ -77,7 +90,7 @@ def get_profile(code: str) -> dict[str, Any] | None:
 def emit(code: str, kind: str, data: dict[str, Any] | None = None) -> dict[str, Any]:
     ts = now_iso()
     item = {"PK": _hh(code), "SK": f"EV#{ts}#{uuid.uuid4().hex[:8]}", "ts": ts,
-            "kind": kind, "data": data or {}}
+            "kind": kind, "data": storable(data or {})}
     table().put_item(Item=item)
     return item
 
@@ -190,7 +203,7 @@ def finish_session(code: str, session_id: str, summary: dict[str, Any]) -> None:
     table().update_item(Key={"PK": _hh(code), "SK": f"SESSION#{session_id}"},
                         UpdateExpression="SET #s = :s, summary = :m, finished = :f",
                         ExpressionAttributeNames={"#s": "state"},
-                        ExpressionAttributeValues={":s": "finished", ":m": summary, ":f": now_iso()})
+                        ExpressionAttributeValues={":s": "finished", ":m": storable(summary), ":f": now_iso()})
     emit(code, "session", {"id": session_id, "state": "finished", "summary": summary})
 
 
@@ -201,3 +214,44 @@ def live_session(code: str) -> dict[str, Any] | None:
         if i.get("state") == "live":
             return plain(i)
     return None
+
+
+# ---- Ring signals, summaries, trace (Phase 4) ------------------------------------
+
+def add_signal(code: str, kind: str, device: str | None, value: Any, ts: str | None = None, raw: dict | None = None) -> dict[str, Any]:
+    ts = ts or now_iso()
+    item = {"PK": _hh(code), "SK": f"SIGNAL#{ts}#{uuid.uuid4().hex[:6]}", "ts": ts, "kind": kind, "device": device or "",
+            "value": storable(value) if value is not None else "", "raw": storable(raw or {}),
+            "ttl": int(datetime.now(timezone.utc).timestamp()) + 14 * 86400}
+    table().put_item(Item=item)
+    emit(code, "signal", {"kind": kind, "device": device, "value": value, "ts": ts})
+    return item
+
+
+def signals_since(code: str, since_iso: str) -> list[dict[str, Any]]:
+    r = table().query(KeyConditionExpression=Key("PK").eq(_hh(code)) & Key("SK").between(f"SIGNAL#{since_iso}", "SIGNAL#￿"))
+    return plain(r.get("Items", []))
+
+
+def put_summary(code: str, day: str, text: str, signals: list[dict[str, Any]]) -> dict[str, Any]:
+    item = {"PK": _hh(code), "SK": f"SUMMARY#{day}", "day": day, "text": text, "signals": storable(signals), "ts": now_iso()}
+    table().put_item(Item=item)
+    emit(code, "summary", {"day": day, "text": text})
+    return item
+
+
+def latest_summary(code: str) -> dict[str, Any] | None:
+    r = table().query(KeyConditionExpression=Key("PK").eq(_hh(code)) & Key("SK").begins_with("SUMMARY#"),
+                      ScanIndexForward=False, Limit=1)
+    items = r.get("Items", [])
+    return plain(items[0]) if items else None
+
+
+def sessions_since(code: str, since_iso: str) -> list[dict[str, Any]]:
+    r = table().query(KeyConditionExpression=Key("PK").eq(_hh(code)) & Key("SK").begins_with("SESSION#"))
+    return [plain(i) for i in r.get("Items", []) if i.get("started", "") >= since_iso]
+
+
+def list_households() -> list[str]:
+    r = table().scan(FilterExpression=Key("SK").eq("PROFILE"), ProjectionExpression="PK")
+    return [i["PK"].split("#", 1)[1] for i in r.get("Items", [])]

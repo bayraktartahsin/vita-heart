@@ -14,6 +14,7 @@ type Props = {
   onCheckin: () => void;
   onOpenMeds: () => void;
   onStartSession: (source: SessionSource) => void;
+  onOpenFamily: () => void;
   checkinPending: boolean;
 };
 
@@ -21,7 +22,7 @@ type Props = {
  * The first thing the television shows. Four things only: a greeting, what is
  * due, one line from the family, and one big button. Everything else waits.
  */
-export function MorningBoard({board, error, live, onCheckin, onOpenMeds, onStartSession, checkinPending}: Props) {
+export function MorningBoard({board, error, live, onCheckin, onOpenMeds, onStartSession, onOpenFamily, checkinPending}: Props) {
   if (error) {
     return (
       <View style={styles.center} testID="board-error">
@@ -67,6 +68,7 @@ export function MorningBoard({board, error, live, onCheckin, onOpenMeds, onStart
       <View style={styles.row}>
         <Card title={board.message ? `From ${board.message.author}` : 'Family'} style={styles.grow} testID="card-message">
           <Text style={styles.h2}>{board.message ? board.message.text : 'No new message.'}</Text>
+          <BigButton label="Family" tone="quiet" onPress={onOpenFamily} testID="open-family" />
         </Card>
         <Card title="Ten minutes, seated" testID="card-session">
           <Text style={styles.body}>Your heart rate from the Watch shows here while you move.</Text>

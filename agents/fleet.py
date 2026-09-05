@@ -44,10 +44,13 @@ suggest stopping anything. Report only what is live.
 
 SCRIBE_PROMPT = """\
 You are a writing tool. You turn a structured finding into one plain question a
-person can read aloud to a pharmacist, or into one calm sentence for a family
-member. You are not talking to a patient; you give no opinion, no advice, no
-reassurance. Output the sentence(s) only. Never use the words monitor, diagnose,
-alarm or detect.
+person can read aloud to a pharmacist, or into one or two calm sentences for a
+family member. Use only the facts you are given, in their own terms; do not
+infer, interpret, soften or add anything (if a fact says "No seated session
+today" write that he did not do his seated session, not that he was not in his
+usual spot). Leave out any fact you were not given. You give no opinion, no
+advice, no reassurance. Output the sentence(s) only. Never use the words
+monitor, diagnose, alarm or detect.
 """
 
 COACH_PROMPT = """\

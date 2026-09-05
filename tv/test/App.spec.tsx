@@ -126,6 +126,23 @@ describe('Vita Heart TV', () => {
     jest.useRealTimers();
   });
 
+  it('shows the family screen with the summary, messages and the agents trace', async () => {
+    mockFetch({
+      '/board': () => board,
+      '/events': () => new Promise(() => {}),
+      '/family/summary': () => ({summary: {day: '2026-09-05', text: 'A quiet day.', signals: [{kind: 'doses', note: '2 of 2 scheduled doses were confirmed on the television.', weight: 1}], ts: 'x'}}),
+      '/family/messages': () => ({messages: [{ts: '1', author: 'Selin', text: 'Bravo baba.'}]}),
+      '/trace': () => ({steps: [{agent: 'Identifier', tool: 'identify_medicine', said: 'CORASPIN is aspirin 100 MG'}]}),
+    });
+    render(<App apiBaseUrl="https://api.test" household="AHMET1" />);
+    await waitFor(() => expect(screen.getByTestId('open-family')).toBeTruthy());
+    fireEvent.press(screen.getByTestId('open-family'));
+    await waitFor(() => expect(screen.getByText('A quiet day.')).toBeTruthy());
+    expect(screen.getByText(/2 of 2 scheduled doses/)).toBeTruthy();
+    expect(screen.getByText(/Bravo baba/)).toBeTruthy();
+    expect(screen.getByText(/CORASPIN is aspirin/)).toBeTruthy();
+  });
+
   it('says plainly when the API is unreachable', async () => {
     mockFetch({'/events': () => new Promise(() => {})});
     render(<App apiBaseUrl="https://api.test" household="NOBODY" />);

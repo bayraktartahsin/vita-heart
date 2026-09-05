@@ -7,13 +7,14 @@ import {API_BASE_URL, DEFAULT_HOUSEHOLD} from './config';
 import {color, space, type} from './design/tokens';
 import {useLiveEvents} from './live/useLiveEvents';
 import {ClockSetup, Slot} from './screens/ClockSetup';
+import {Family} from './screens/Family';
 import {HeartSession, SessionSource} from './screens/HeartSession';
 import {SessionState, current, start as startEngine, summarize} from './session/engine';
 import {MedicationMoment} from './screens/MedicationMoment';
 import {MorningBoard} from './screens/MorningBoard';
 import {Pairing} from './screens/Pairing';
 
-type Screen = 'pairing' | 'board' | 'meds' | 'clock' | 'session';
+type Screen = 'pairing' | 'board' | 'meds' | 'clock' | 'session' | 'family';
 
 type Props = {apiBaseUrl?: string; household?: string | null};
 
@@ -32,6 +33,7 @@ export const App = ({apiBaseUrl = API_BASE_URL, household: initialHousehold = DE
   const [session, setSession] = useState<{id: string; source: SessionSource; state: SessionState} | null>(null);
   const [latestBpm, setLatestBpm] = useState<number | null>(null);
   const [coachLine, setCoachLine] = useState('');
+  const [familyRefresh, setFamilyRefresh] = useState(0);
   const sessionRef = useRef(session);
   sessionRef.current = session;
 
@@ -59,6 +61,9 @@ export const App = ({apiBaseUrl = API_BASE_URL, household: initialHousehold = DE
       // Cheap, correct, and it keeps one source of truth: the API.
       if (['message', 'checkin', 'dose', 'board', 'med'].includes(e.kind)) {
         refresh();
+      }
+      if (['message', 'summary', 'med', 'signal'].includes(e.kind)) {
+        setFamilyRefresh(n => n + 1);
       }
       if (e.kind === 'hr' && sessionRef.current && e.data.session === sessionRef.current.id) {
         setLatestBpm(Number(e.data.bpm));
@@ -190,6 +195,8 @@ export const App = ({apiBaseUrl = API_BASE_URL, household: initialHousehold = DE
               setScreen('board');
             }}
           />
+        ) : screen === 'family' && api ? (
+          <Family api={api} onBack={() => setScreen('board')} refreshKey={familyRefresh} />
         ) : screen === 'session' && session ? (
           <HeartSession state={session.state} onTick={onSessionTick} latestBpm={latestBpm} source={session.source} coachLine={coachLine} onFinish={onSessionFinish} onStop={stopSession} />
         ) : screen === 'clock' && board ? (
@@ -197,7 +204,7 @@ export const App = ({apiBaseUrl = API_BASE_URL, household: initialHousehold = DE
         ) : screen === 'meds' && board ? (
           <MedicationMoment doses={board.dueDoses} onConfirm={confirmDose} onBack={() => setScreen('board')} onSetClock={() => setScreen('clock')} pendingId={dosePending} />
         ) : (
-          <MorningBoard board={board} error={error} live={live} onCheckin={checkin} onOpenMeds={() => setScreen('meds')} onStartSession={startSession} checkinPending={checkinPending} />
+          <MorningBoard board={board} error={error} live={live} onCheckin={checkin} onOpenMeds={() => setScreen('meds')} onStartSession={startSession} onOpenFamily={() => setScreen('family')} checkinPending={checkinPending} />
         )}
       </TVFocusGuideView>
     </View>

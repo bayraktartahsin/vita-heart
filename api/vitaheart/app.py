@@ -14,12 +14,12 @@ import time
 
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
-from . import __version__, board, config, store
+from . import __version__, board, config, ring, store
 from .meds import service as meds
 
 app = FastAPI(title="Vita Heart API", version=__version__)
@@ -281,3 +281,70 @@ def session_coach(body: CoachIn) -> dict:
         line = ""
         return {"line": line, "fallback": True, "reason": type(e).__name__}
     return {"line": line, "fallback": False}
+
+
+# ---- family page, summaries, trace, Night Watch (Phase 4) -----------------------------------
+
+@app.get("/family", response_class=HTMLResponse)
+def family_page() -> str:
+    return (_WEB / "family.html").read_text(encoding="utf-8")
+
+
+@app.get("/family/summary")
+def family_summary(household: str = Query(..., min_length=4, max_length=12)) -> dict:
+    _profile_or_404(household)
+    return {"summary": store.latest_summary(household)}
+
+
+@app.get("/trace")
+def trace(household: str = Query(..., min_length=4, max_length=12)) -> dict:
+    """Every agent tool call kept on the medicines, newest first: the agents thinking, legibly."""
+    _profile_or_404(household)
+    steps: list[dict] = []
+    for m in store.list_meds(household):
+        for st in m.get("trace") or []:
+            steps.append({**st, "med": m.get("name")})
+    steps.sort(key=lambda s: s.get("ts", ""), reverse=True)
+    return {"steps": steps[:100]}
+
+
+class NightRunIn(BaseModel):
+    household: str = Field(min_length=4, max_length=12)
+    notify: bool = True
+
+
+@app.post("/night/run")
+def night_run(body: NightRunIn) -> dict:
+    """Run Night Watch now (the demo does not wait for 21:00)."""
+    from .night import watch
+
+    _profile_or_404(body.household)
+    return watch.run_for(body.household, notify=body.notify)
+
+
+# ---- Ring (Phase 4) ---------------------------------------------------------------------
+
+@app.post("/ring/webhook")
+async def ring_webhook(request: Request, household: str = Query(config.DEMO_HOUSEHOLD, min_length=4, max_length=12),
+                       x_signature: str | None = Header(default=None)) -> dict:
+    """Ring posts here. Verified with the app's HMAC key, answered within the 5 s Ring allows."""
+    body = await request.body()
+    if not ring.verify(body, x_signature, ring.hmac_key()):
+        raise HTTPException(401, "signature did not verify")
+    _profile_or_404(household)
+    import json
+    try:
+        payload = json.loads(body or b"{}")
+    except json.JSONDecodeError:
+        raise HTTPException(400, "body is not JSON")
+    return ring.ingest(household, payload)
+
+
+@app.get("/signals")
+def signals(household: str = Query(..., min_length=4, max_length=12), hours: int = Query(24, ge=1, le=168)) -> dict:
+    from datetime import datetime, timedelta, timezone
+
+    _profile_or_404(household)
+    since = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat(timespec="microseconds")
+    return {"signals": [{"ts": s["ts"], "kind": s["kind"], "device": s.get("device"), "value": s.get("value")}
+                        for s in store.signals_since(household, since)]}

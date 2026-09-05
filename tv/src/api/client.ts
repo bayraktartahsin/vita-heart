@@ -18,6 +18,10 @@ export type Dose = {
   status: string;
 };
 
+export type Summary = {day: string; text: string; signals: {kind: string; note: string; weight: number}[]; ts: string};
+export type TraceStep = {ts?: string; agent: string; tool: string; said?: string; med?: string};
+export type Message = {ts: string; author: string; text: string};
+
 export type Board = {
   household: string;
   greeting: string;
@@ -97,6 +101,18 @@ export class VitaHeartApi {
 
   coach(numbers: Record<string, unknown>): Promise<{line: string; fallback: boolean}> {
     return this.json(this.url('/session/coach'), {method: 'POST', body: JSON.stringify({household: this.household, numbers})});
+  }
+
+  summary(): Promise<{summary: Summary | null}> {
+    return this.json(this.url('/family/summary'));
+  }
+
+  trace(): Promise<{steps: TraceStep[]}> {
+    return this.json(this.url('/trace'));
+  }
+
+  messages(): Promise<{messages: Message[]}> {
+    return this.json(this.url('/family/messages'));
   }
 
   checkin(): Promise<{ts: string}> {
