@@ -1,0 +1,32 @@
+# xcodegen spec for the Vita Heart Watch app: a standalone watchOS app that
+# streams heart rate to the television's session. Regenerate with `xcodegen`.
+# The entitlements below are the source of truth; verify the SIGNED binary's
+# entitlements after every build (codesign -d --entitlements :- <app>), because
+# hand edits to generated projects are overwritten.
+name: VitaHeartWatch
+options:
+  bundleIdPrefix: com.gravitilabs
+  deploymentTarget:
+    watchOS: "11.0"
+  xcodeVersion: "26.0"
+settings:
+  base:
+    DEVELOPMENT_TEAM: 898978C87T
+    CODE_SIGN_STYLE: Automatic
+    SWIFT_VERSION: "5.10"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+targets:
+  VitaHeartWatch:
+    type: application
+    platform: watchOS
+    sources: [VitaHeartWatch]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.gravitilabs.vitaheart.watch
+        INFOPLIST_FILE: VitaHeartWatch/Info.plist
+        CODE_SIGN_ENTITLEMENTS: VitaHeartWatch/VitaHeartWatch.entitlements
+        WKWatchOnly: YES
+        TARGETED_DEVICE_FAMILY: "4"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        GENERATE_INFOPLIST_FILE: NO

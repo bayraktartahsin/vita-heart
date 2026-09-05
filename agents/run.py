@@ -50,7 +50,9 @@ class Trace(HookProvider):
 
 
 def _clean(text: str) -> str:
-    return re.sub(r"<thinking>.*?</thinking>\s*", "", text, flags=re.S).strip()
+    """Nova wraps answers in <thinking> and <response> tags. Not for the screen."""
+    text = re.sub(r"<thinking>.*?</thinking>\s*", "", text, flags=re.S)
+    return re.sub(r"</?response>", "", text).strip()
 
 
 def read_boxes(readings: list[dict[str, Any]], on_step: StepFn | None = None) -> dict[str, Any]:

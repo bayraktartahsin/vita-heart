@@ -12,3 +12,6 @@ build/
 .build/
 __pycache__/
 *.pyc
+watch/*.xcodeproj
+watch/build/
+DerivedData/
