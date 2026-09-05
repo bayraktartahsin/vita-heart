@@ -6,3 +6,9 @@ keys*
 build/
 .DS_Store
 *.log
+.bedrock_agentcore.yaml
+.bedrock_agentcore/
+.agentcore-deploy.log
+.build/
+__pycache__/
+*.pyc

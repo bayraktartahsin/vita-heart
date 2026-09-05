@@ -36,6 +36,7 @@ API_NAME = "vitaheart"
 BUCKET_PREFIX = "vitaheart-photos-"
 BUILD = ROOT / ".build"
 
+# strands is NOT bundled: the Lambda calls the fleet on AgentCore. Locally the fleet runs in-process.
 DEPS = ["fastapi==0.141.1", "mangum==0.22.0", "pydantic==2.12.5", "httpx==0.28.1"]
 
 TRUST = {"Version": "2012-10-17", "Statement": [{
@@ -135,8 +136,26 @@ def _wait(lam) -> None:
         time.sleep(2)
 
 
+def agentcore_arn() -> str | None:
+    """The fleet's runtime ARN, if `agentcore deploy` has run. Read from its config file, never typed by hand."""
+    cfg = ROOT / ".bedrock_agentcore.yaml"
+    if not cfg.exists():
+        return None
+    for line in cfg.read_text().splitlines():
+        if "agent_arn:" in line:
+            return line.split("agent_arn:", 1)[1].strip() or None
+    return None
+
+
 def ensure_function(lam, role_arn: str, code: bytes, bucket: str) -> None:
-    env = {"Variables": {"VITAHEART_TABLE": TABLE, "VITAHEART_REGION": REGION, "VITAHEART_BUCKET": bucket}}
+    variables = {"VITAHEART_TABLE": TABLE, "VITAHEART_REGION": REGION, "VITAHEART_BUCKET": bucket}
+    arn = agentcore_arn()
+    if arn:
+        variables["VITAHEART_AGENT_ARN"] = arn
+        say(f"fleet on AgentCore: {arn.rsplit('/', 1)[-1]}")
+    else:
+        say("no AgentCore runtime configured; the API will run the fleet in-process only if strands is bundled")
+    env = {"Variables": variables}
     try:
         lam.get_function(FunctionName=FUNCTION)
         lam.update_function_code(FunctionName=FUNCTION, ZipFile=code, Architectures=["arm64"])
