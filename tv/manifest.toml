@@ -1,7 +1,7 @@
 schema-version = 1
 
 [package]
-title = "Basic UI React Native Application for project vitahearttv"
+title = "Vita Heart"
 version = "0.1.0"
 id = "com.gravitilabs.vitaheart"
 
@@ -15,6 +15,13 @@ id = "/com.amazon.vega.os@IVega_1_2"
 
 [[needs.module]]
 id = "/com.amazon.kepler.keplerscript_4@IKeplerScript_0"
+
+# The television talks to the Vita Heart API over HTTPS. Without this service
+# declaration the app's fetch() calls never leave the device (found the hard
+# way; see docs/FRICTION-LOG.md).
+[wants]
+[[wants.service]]
+id = "com.amazon.network.service"
 
 
 [components]

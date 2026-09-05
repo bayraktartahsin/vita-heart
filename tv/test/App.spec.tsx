@@ -51,7 +51,7 @@ describe('Vita Heart TV', () => {
 
   it('starts on pairing when no household is known', () => {
     mockFetch({});
-    render(<App apiBaseUrl="https://api.test" />);
+    render(<App apiBaseUrl="https://api.test" household={null} />);
     expect(screen.getByTestId('pairing')).toBeTruthy();
   });
 });

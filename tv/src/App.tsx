@@ -11,8 +11,14 @@ import {Pairing} from './screens/Pairing';
 
 type Screen = 'pairing' | 'board';
 
-export const App = ({apiBaseUrl = API_BASE_URL, household: initialHousehold}: {apiBaseUrl?: string; household?: string}) => {
-  const [household, setHousehold] = useState<string | null>(initialHousehold ?? null);
+type Props = {apiBaseUrl?: string; household?: string | null};
+
+/**
+ * `household` undefined: use the demo household (what the simulator and the
+ * judges see). `household` null: start on the pairing screen.
+ */
+export const App = ({apiBaseUrl = API_BASE_URL, household: initialHousehold = DEFAULT_HOUSEHOLD}: Props) => {
+  const [household, setHousehold] = useState<string | null>(initialHousehold);
   const [screen, setScreen] = useState<Screen>(initialHousehold ? 'board' : 'pairing');
   const [board, setBoard] = useState<Board | null>(null);
   const [error, setError] = useState<string | null>(null);
