@@ -1,118 +1,95 @@
-import React, {useState} from 'react';
-import {StyleSheet, Text, ImageBackground, View, Image} from 'react-native';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import {StyleSheet, Text, View} from 'react-native';
+// eslint-disable-next-line @amazon-devices/kepler/sdl-package-version-check-imports -- system library, understood
 import {TVFocusGuideView} from '@amazon-devices/react-native-kepler';
-import {Tile} from './components/Tile';
-import {tiles} from './data/tiles';
+import {ApiError, Board, LiveEvent, VitaHeartApi} from './api/client';
+import {API_BASE_URL, DEFAULT_HOUSEHOLD} from './config';
+import {color, space, type} from './design/tokens';
+import {useLiveEvents} from './live/useLiveEvents';
+import {MorningBoard} from './screens/MorningBoard';
+import {Pairing} from './screens/Pairing';
 
-export const App = () => {
-  const [focusedTileId, setFocusedTileId] = useState<string>('home');
+type Screen = 'pairing' | 'board';
 
-  const focusedTile = tiles.find((t) => t.id === focusedTileId);
+export const App = ({apiBaseUrl = API_BASE_URL, household: initialHousehold}: {apiBaseUrl?: string; household?: string}) => {
+  const [household, setHousehold] = useState<string | null>(initialHousehold ?? null);
+  const [screen, setScreen] = useState<Screen>(initialHousehold ? 'board' : 'pairing');
+  const [board, setBoard] = useState<Board | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [checkinPending, setCheckinPending] = useState(false);
+
+  const api = useMemo(() => (household ? new VitaHeartApi(apiBaseUrl, household) : null), [apiBaseUrl, household]);
+
+  const refresh = useCallback(async () => {
+    if (!api) {
+      return;
+    }
+    try {
+      setBoard(await api.board());
+      setError(null);
+    } catch (e) {
+      setError(e instanceof ApiError ? `${e.status}: ${e.message}` : String(e));
+    }
+  }, [api]);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  const onEvent = useCallback(
+    (e: LiveEvent) => {
+      // Every event kind that changes what the board shows triggers a refetch.
+      // Cheap, correct, and it keeps one source of truth: the API.
+      if (['message', 'checkin', 'dose', 'board'].includes(e.kind)) {
+        refresh();
+      }
+    },
+    [refresh],
+  );
+  const live = useLiveEvents(api, onEvent);
+
+  const checkin = useCallback(async () => {
+    if (!api) {
+      return;
+    }
+    setCheckinPending(true);
+    try {
+      await api.checkin();
+      await refresh();
+    } catch (e) {
+      setError(e instanceof ApiError ? `${e.status}: ${e.message}` : String(e));
+    } finally {
+      setCheckinPending(false);
+    }
+  }, [api, refresh]);
 
   return (
-    <ImageBackground
-      source={require('./assets/background.png')}
-      style={styles.background}>
-      <View style={styles.headerArea}>
-        {focusedTileId === 'home' ? (
-          <>
-            <View style={styles.headerTextContainer}>
-              <Text style={styles.headerTitle}>Hello Vega,</Text>
-              <Text style={styles.headerSubtitle}>
-                Use your remote to explore and start your Vega journey 🚀
-              </Text>
-            </View>
-            <Image
-              source={require('./assets/vega.png')}
-              style={styles.vegaLogo}
-              resizeMode="contain"
-              testID="vega-logo"
-            />
-          </>
-        ) : (
-          <>
-            <View style={styles.headerTextContainer}>
-              <Text style={styles.focusedTitle}>{focusedTile?.label}</Text>
-            </View>
-            {focusedTile?.description && (
-              <Text style={styles.focusedDescription}>
-                {focusedTile.description}
-              </Text>
-            )}
-          </>
-        )}
+    <View style={styles.root}>
+      <View style={styles.rail}>
+        <Text style={styles.brand}>Vita Heart</Text>
+        <Text style={styles.railItem}>{household ?? '—'}</Text>
       </View>
-
-      <TVFocusGuideView style={styles.tileRowContent}>
-        {tiles.map((tile) => (
-          <Tile
-            key={tile.id}
-            label={tile.label}
-            icon={tile.icon}
-            isFocused={focusedTileId === tile.id}
-            onFocus={() => setFocusedTileId(tile.id)}
-            onBlur={() => {}}
-            testID={`tile-${tile.id}`}
-            accessibilityLabel={tile.accessibilityLabel}
-            hasTVPreferredFocus={tile.id === 'home'}
+      <TVFocusGuideView style={styles.content} autoFocus>
+        {screen === 'pairing' ? (
+          <Pairing
+            initial={DEFAULT_HOUSEHOLD}
+            onPaired={code => {
+              setHousehold(code);
+              setScreen('board');
+            }}
           />
-        ))}
+        ) : (
+          <MorningBoard board={board} error={error} live={live} onCheckin={checkin} checkinPending={checkinPending} />
+        )}
       </TVFocusGuideView>
-    </ImageBackground>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  background: {
-    flex: 1,
-    paddingHorizontal: 64,
-    paddingVertical: 32,
-  },
-  headerArea: {
-    flex: 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  headerTextContainer: {
-    flex: 1,
-    flexShrink: 1,
-  },
-  headerTitle: {
-    color: '#FFFFFF',
-    fontSize: 64,
-    lineHeight: 72,
-    fontWeight: '600',
-    flexShrink: 1,
-  },
-  headerSubtitle: {
-    color: '#FFFFFF',
-    fontSize: 24,
-    flexShrink: 1,
-  },
-  vegaLogo: {
-    width: 280,
-    height: 200,
-    marginLeft: 40,
-  },
-  focusedTitle: {
-    color: '#FFFFFF',
-    fontSize: 64,
-    lineHeight: 72,
-    fontWeight: 'bold',
-    flexShrink: 1,
-  },
-  focusedDescription: {
-    color: '#FFFFFF',
-    fontSize: 24,
-    lineHeight: 32,
-    flex: 1,
-    marginLeft: 20,
-    paddingTop: 10,
-  },
-  tileRowContent: {
-    flex: 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
+  root: {flex: 1, flexDirection: 'row', backgroundColor: color.ground},
+  rail: {width: 260, paddingVertical: space.xl, paddingHorizontal: space.l, gap: space.l, borderRightWidth: 1, borderRightColor: color.line},
+  brand: {color: color.warm, fontSize: type.body, fontWeight: '700'},
+  railItem: {color: color.textDim, fontSize: type.small},
+  content: {flex: 1, paddingHorizontal: space.xl, paddingVertical: space.xl},
 });

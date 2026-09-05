@@ -1,0 +1,11 @@
+# Runtime (the Lambda and the local server run the same FastAPI app)
+fastapi==0.141.1
+mangum==0.22.0
+uvicorn==0.52.4
+boto3==1.43.83
+pydantic==2.12.5
+httpx==0.28.1
+
+# Tests
+pytest==9.1.1
+moto[dynamodb]>=5,<6
