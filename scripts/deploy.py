@@ -42,7 +42,8 @@ RING_KEYS = Path(os.environ.get("VITAHEART_RING_KEYS_FILE", Path.home() / "Docum
 BUILD = ROOT / ".build"
 
 # strands is NOT bundled: the Lambda calls the fleet on AgentCore. Locally the fleet runs in-process.
-DEPS = ["fastapi==0.141.1", "mangum==0.22.0", "pydantic==2.12.5", "httpx==0.28.1"]
+# mcp (the MCP SDK) is bundled: the Alexa+ server runs inside this Lambda.
+DEPS = ["fastapi==0.141.1", "mangum==0.22.0", "pydantic==2.12.5", "httpx==0.28.1", "mcp==1.29.1", "python-multipart==0.0.32"]
 
 TRUST = {"Version": "2012-10-17", "Statement": [{
     "Effect": "Allow", "Principal": {"Service": "lambda.amazonaws.com"}, "Action": "sts:AssumeRole"}]}
@@ -78,6 +79,7 @@ def build_zip() -> bytes:
                     "--python-version", "3.12", "--only-binary=:all:", *DEPS], check=True)
     shutil.copytree(API_DIR / "vitaheart", BUILD / "vitaheart")
     shutil.copytree(ROOT / "agents", BUILD / "agents", ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+    shutil.copytree(ROOT / "alexa", BUILD / "alexa", ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
         for p in BUILD.rglob("*"):

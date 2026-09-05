@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 
 for cand in (Path(__file__).resolve().parents[1] / "api",):
     if str(cand) not in sys.path:
@@ -38,6 +39,9 @@ def build_server() -> FastMCP:
         stateless_http=True,
         json_response=True,
         streamable_http_path="/",
+        # The SDK's DNS-rebinding guard allows only localhost Host headers; behind API Gateway
+        # every request would be 421. Bearer tokens (OAuth 2.1 PKCE) guard this endpoint instead.
+        transport_security=TransportSecuritySettings(enable_dns_rebinding_protection=False),
     )
 
 
