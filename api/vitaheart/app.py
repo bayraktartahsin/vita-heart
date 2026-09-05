@@ -348,3 +348,138 @@ def signals(household: str = Query(..., min_length=4, max_length=12), hours: int
     since = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat(timespec="microseconds")
     return {"signals": [{"ts": s["ts"], "kind": s["kind"], "device": s.get("device"), "value": s.get("value")}
                         for s in store.signals_since(household, since)]}
+
+
+# ---- Alexa+: OAuth 2.1 PKCE + MCP (Phase 5) ---------------------------------------------------
+
+import asyncio  # noqa: E402
+import sys as _sys  # noqa: E402
+for _cand in (Path(__file__).resolve().parents[2],):
+    if (_cand / "alexa").is_dir() and str(_cand) not in _sys.path:
+        _sys.path.insert(0, str(_cand))
+from alexa import oauth as _oauth  # noqa: E402
+from alexa import server as _mcp  # noqa: E402
+from fastapi.responses import JSONResponse, RedirectResponse  # noqa: E402
+from urllib.parse import urlencode  # noqa: E402
+
+
+def _issuer(request: Request) -> str:
+    host = request.headers.get("x-forwarded-host") or request.headers.get("host") or "localhost"
+    scheme = request.headers.get("x-forwarded-proto") or ("https" if "amazonaws" in host else request.url.scheme)
+    return f"{scheme}://{host}"
+
+
+@app.get("/.well-known/oauth-authorization-server")
+def oauth_metadata(request: Request) -> dict:
+    return _oauth.metadata(_issuer(request))
+
+
+@app.get("/.well-known/oauth-protected-resource")
+def protected_resource(request: Request) -> dict:
+    iss = _issuer(request)
+    return {"resource": f"{iss}/mcp", "authorization_servers": [iss], "scopes_supported": ["household"], "bearer_methods_supported": ["header"]}
+
+
+@app.get("/oauth/authorize", response_class=HTMLResponse)
+def oauth_authorize(request: Request, client_id: str, redirect_uri: str, code_challenge: str, state: str = "",
+                    code_challenge_method: str = "S256", scope: str = "household", response_type: str = "code") -> str:
+    """The consent page: the household types the code shown on its television. No Amazon password anywhere."""
+    if response_type != "code":
+        raise HTTPException(400, "response_type must be code")
+    q = urlencode({"client_id": client_id, "redirect_uri": redirect_uri, "code_challenge": code_challenge,
+                   "code_challenge_method": code_challenge_method, "state": state, "scope": scope})
+    return f"""<!doctype html><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1">
+<title>Vita Heart · Connect</title><body style="font:18px system-ui;background:#f6f2ea;color:#1a1f26;margin:0">
+<main style="max-width:480px;margin:0 auto;padding:32px 20px"><h1 style="font-size:26px">Connect Alexa+ to Vita Heart</h1>
+<p>Type the household code shown on the television. This lets Alexa+ read today's board and confirm medicines on it.</p>
+<form method=post action="/oauth/approve?{q}"><input name=household maxlength=12 required autocapitalize=characters
+ style="font:22px system-ui;letter-spacing:3px;padding:12px;border-radius:12px;border:1px solid #d8d1c4;width:100%">
+<button style="margin-top:14px;font:700 18px system-ui;padding:14px 20px;border:0;border-radius:12px;background:#f2a93b;width:100%">Allow</button></form></main>"""
+
+
+@app.post("/oauth/approve")
+async def oauth_approve(request: Request, client_id: str, redirect_uri: str, code_challenge: str, state: str = "",
+                        code_challenge_method: str = "S256", scope: str = "household"):
+    form = await request.form()
+    household = str(form.get("household", "")).strip().upper()
+    if not store.get_profile(household):
+        raise HTTPException(400, "unknown household code")
+    try:
+        code = _oauth.issue_code(client_id, redirect_uri, code_challenge, code_challenge_method, household, scope)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    sep = "&" if "?" in redirect_uri else "?"
+    return RedirectResponse(f"{redirect_uri}{sep}{urlencode({'code': code, 'state': state})}", status_code=302)
+
+
+@app.post("/oauth/token")
+async def oauth_token(request: Request):
+    form = await request.form()
+    if form.get("grant_type") != "authorization_code":
+        return JSONResponse({"error": "unsupported_grant_type"}, status_code=400)
+    try:
+        return _oauth.exchange(str(form.get("code", "")), str(form.get("code_verifier", "")),
+                               str(form.get("client_id", "")), str(form.get("redirect_uri", "")))
+    except ValueError:
+        return JSONResponse({"error": "invalid_grant"}, status_code=400)
+
+
+class _McpAuth:
+    """Bearer token in, household out. Anonymous: a bare 401, exactly as the Alexa+ toolkit specifies.
+
+    Dispatches at the ASGI layer (not a Starlette sub-mount) so `/mcp` works without a
+    trailing-slash redirect, which MCP clients do not follow.
+    """
+
+    def __init__(self, inner, fallback):
+        self.inner = inner
+        self.fallback = fallback
+        self._ready = None
+        self._task = None
+        self._loop = None
+
+    async def _runner(self):
+        # Hold the session manager open in one long-lived task; entering it inside a request
+        # task and leaving it in another breaks anyio's cancel scopes.
+        async with _mcp.server.session_manager.run():
+            self._ready.set()
+            await asyncio.Event().wait()
+
+    async def _ensure_started(self):
+        # FastMCP's session manager normally starts with the Starlette lifespan. This app is
+        # dispatched by hand and runs on Lambda with lifespans off, so start it on first use.
+        loop = asyncio.get_running_loop()
+        if self._ready is None or self._loop is not loop:   # first use, or a new event loop (tests, reloads)
+            self._loop = loop
+            self._ready = asyncio.Event()
+            self._task = loop.create_task(self._runner())
+        await self._ready.wait()
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http" or not (scope["path"] == "/mcp" or scope["path"].startswith("/mcp/")):
+            return await self.fallback(scope, receive, send)
+        await self._ensure_started()
+        scope = dict(scope)
+        scope["path"] = "/" + scope["path"][len("/mcp"):].lstrip("/")
+        scope["raw_path"] = scope["path"].encode()
+        headers = {k.decode().lower(): v.decode() for k, v in scope.get("headers", [])}
+        auth = headers.get("authorization", "")
+        token = auth[7:] if auth.lower().startswith("bearer ") else None
+        household = _oauth.household_for(token)
+        if not household:
+            await send({"type": "http.response.start", "status": 401, "headers": [(b"content-type", b"application/json")]})
+            await send({"type": "http.response.body", "body": b'{"error":"unauthorized"}'})
+            return
+        tok = _mcp.current_household.set(household)
+        try:
+            await self.inner(scope, receive, send)
+        except Exception:  # noqa: BLE001  log the real cause; the client only sees a 500
+            import logging
+            logging.getLogger("vitaheart.mcp").exception("MCP request failed")
+            raise
+        finally:
+            _mcp.current_household.reset(tok)
+
+
+# The deployable ASGI app: /mcp goes to the MCP server behind bearer auth, everything else to FastAPI.
+asgi = _McpAuth(_mcp.asgi_app, app)

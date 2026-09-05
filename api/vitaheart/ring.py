@@ -65,15 +65,10 @@ def normalise(payload: dict[str, Any]) -> dict[str, Any]:
             "request_id": (payload.get("meta") or {}).get("request_id") or payload.get("request_id")}
 
 
-_seen: set[str] = set()
-
-
 def ingest(code: str, payload: dict[str, Any]) -> dict[str, Any]:
     n = normalise(payload)
     rid = n.get("request_id")
-    if rid and rid in _seen:
+    if rid and not store.claim_request(code, rid):
         return {"duplicate": True, "kind": n["kind"]}
-    if rid:
-        _seen.add(rid)
     store.add_signal(code, n["kind"], n["device"], n["value"], ts=n["ts"], raw=payload)
     return {"duplicate": False, "kind": n["kind"], "device": n["device"], "value": n["value"]}

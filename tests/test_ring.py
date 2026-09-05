@@ -11,7 +11,6 @@ def client(ddb, monkeypatch):
     monkeypatch.setenv("VITAHEART_RING_HMAC_KEY", KEY.decode())
     from vitaheart import seed, app as appmod
     seed.main()
-    ring._seen.clear()
     return TestClient(appmod.app)
 
 

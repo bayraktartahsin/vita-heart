@@ -228,6 +228,21 @@ def add_signal(code: str, kind: str, device: str | None, value: Any, ts: str | N
     return item
 
 
+def claim_request(code: str, request_id: str) -> bool:
+    """First delivery of a webhook request id wins; retries and replays return False. Durable, not in-memory."""
+    from botocore.exceptions import ClientError
+
+    try:
+        table().put_item(Item={"PK": _hh(code), "SK": f"RINGREQ#{request_id}", "ts": now_iso(),
+                               "ttl": int(datetime.now(timezone.utc).timestamp()) + 7 * 86400},
+                         ConditionExpression="attribute_not_exists(SK)")
+        return True
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
+            return False
+        raise
+
+
 def signals_since(code: str, since_iso: str) -> list[dict[str, Any]]:
     r = table().query(KeyConditionExpression=Key("PK").eq(_hh(code)) & Key("SK").between(f"SIGNAL#{since_iso}", "SIGNAL#￿"))
     return plain(r.get("Items", []))
@@ -255,3 +270,17 @@ def sessions_since(code: str, since_iso: str) -> list[dict[str, Any]]:
 def list_households() -> list[str]:
     r = table().scan(FilterExpression=Key("SK").eq("PROFILE"), ProjectionExpression="PK")
     return [i["PK"].split("#", 1)[1] for i in r.get("Items", [])]
+
+
+def claim_request(code: str, request_id: str) -> bool:
+    """Idempotency that survives Lambda restarts: the first claim of a request id wins."""
+    from botocore.exceptions import ClientError
+    try:
+        table().put_item(Item={"PK": _hh(code), "SK": f"RINGREQ#{request_id}", "ts": now_iso(),
+                               "ttl": int(datetime.now(timezone.utc).timestamp()) + 7 * 86400},
+                         ConditionExpression="attribute_not_exists(SK)")
+        return True
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
+            return False
+        raise

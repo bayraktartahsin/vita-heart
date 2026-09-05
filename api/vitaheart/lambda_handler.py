@@ -9,10 +9,10 @@ import logging
 
 from mangum import Mangum
 
-from .app import app
+from .app import asgi
 
 log = logging.getLogger("vitaheart.lambda")
-_http = Mangum(app, lifespan="off")
+_http = Mangum(asgi, lifespan="off")
 
 
 def handler(event, context):

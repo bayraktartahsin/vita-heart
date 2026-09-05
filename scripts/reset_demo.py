@@ -18,7 +18,7 @@ from boto3.dynamodb.conditions import Key  # noqa: E402
 from vitaheart import config, seed, store  # noqa: E402
 
 KEEP_MEDS = "--keep-meds" in sys.argv
-PREFIXES = ("DOSE#", "EV#", "MSG#", "CHECKIN#") + (() if KEEP_MEDS else ("MED#",))
+PREFIXES = ("DOSE#", "EV#", "MSG#", "CHECKIN#", "SIGNAL#", "RINGREQ#", "SUMMARY#", "SESSION#", "HR#") + (() if KEEP_MEDS else ("MED#",))
 
 
 def main() -> None:
