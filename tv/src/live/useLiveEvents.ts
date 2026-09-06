@@ -39,7 +39,7 @@ export function useLiveEvents(api: VitaHeartApi | null, onEvent: (e: LiveEvent) 
             return;
           }
           setState('retrying');
-          await new Promise(r => setTimeout(r, backoff));
+          await new Promise<void>(r => setTimeout(() => r(), backoff));
           backoff = Math.min(backoff * 2, 15000);
         }
       }

@@ -1,0 +1,75 @@
+<!doctype html><meta charset="utf-8"><title>Vita Heart · Medication Moment</title>
+<link rel="stylesheet" href="kit.css"><script src="icons.js"></script>
+<style>
+  .list{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 152px;gap:24px}
+  .med{padding:34px 36px;gap:22px}
+  .med .top{display:flex;gap:26px;align-items:flex-start}
+  .box{width:172px;height:124px;border-radius:20px;flex:none;position:relative;overflow:hidden;
+    background:linear-gradient(150deg,#FBF7EF,#E6DFD2);box-shadow:0 12px 30px rgba(0,0,0,.42)}
+  .box .band{position:absolute;left:0;right:0;top:0;height:30px}
+  .box .nm{position:absolute;left:14px;right:14px;top:42px;color:#1B1A17;font-weight:700;font-size:23px;line-height:1.1}
+  .box .mg{position:absolute;left:14px;bottom:12px;color:#5C574E;font-weight:600;font-size:18px;max-width:96px}
+  .box .bar{position:absolute;right:12px;bottom:12px;width:34px;height:20px;background:repeating-linear-gradient(90deg,#1B1A17 0 3px,transparent 3px 6px)}
+  .med h3{margin-bottom:6px}
+  .med .meta{font-size:25px;color:var(--dim);line-height:1.35}
+  .safety{display:flex;gap:14px;align-items:flex-start;padding:20px 24px;border-radius:20px;font-size:24px;line-height:1.32;
+    color:#FFD9A1;background:rgba(245,177,76,.12);border:1px solid rgba(245,177,76,.32)}
+  .safety svg{flex:none;color:var(--warm);margin-top:3px}
+  .done{display:flex;align-items:center;gap:14px;color:var(--calm);font-size:29px;font-weight:600}
+  .taken{opacity:.72}
+  .taken .box{filter:saturate(.5)}
+</style>
+<div class="tv">
+  <div class="rail">
+    <div class="mark"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#20160A" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12.5h3.6l2-5.4 3.1 10.4 2.9-8 1.8 3h5.6"/></svg></div>
+    <nav class="nav"><a data-i="home"></a><a class="on" data-i="pill"></a><a data-i="heart"></a><a data-i="family"></a></nav>
+    <div class="foot-ico" data-i="shield"></div>
+  </div>
+  <div class="page">
+    <div class="head">
+      <div><h1>Two to take, <em>this morning</em></h1><div class="sub">Photographed by Selin · read by the agents on Thursday</div></div>
+      <div class="live"><b></b>08:14</div>
+    </div>
+
+    <div class="list">
+      <section class="card tint-warm med">
+        <div class="top">
+          <div class="box"><div class="band" style="background:linear-gradient(90deg,#E2452F,#F2704E)"></div><div class="nm">CORASPIN</div><div class="mg">100 mg · 30 tb</div><div class="bar"></div></div>
+          <div style="flex:1">
+            <h3>Coraspin 100 mg</h3>
+            <div class="meta">Aspirin · one tablet · after food<br><span style="color:var(--warm-2)">Morning, 08:00</span></div>
+          </div>
+        </div>
+        <div class="safety" data-i="shield">A batch of aspirin was recalled last month. Ask the pharmacist: “is lot 25A007 affected?” Do not stop taking it on your own.</div>
+        <div class="btn on" data-i="check" style="align-self:flex-start;margin-top:auto">I took it</div>
+      </section>
+
+      <section class="card med taken">
+        <div class="top">
+          <div class="box"><div class="band" style="background:linear-gradient(90deg,#2E6FB7,#4E9AE0)"></div><div class="nm">GLIFOR</div><div class="mg">850 mg · 60 tb</div><div class="bar"></div></div>
+          <div style="flex:1">
+            <h3>Glifor 850 mg</h3>
+            <div class="meta">Metformin · one tablet · after food<br><span>Morning, 08:00 · and again at 19:00</span></div>
+          </div>
+        </div>
+        <div class="chip calm" data-i="check" style="align-self:flex-start">Nothing on the safety record today</div>
+        <div class="done" data-i="check" style="margin-top:auto">Taken at 08:06</div>
+      </section>
+
+      <section class="card tint-sky" style="grid-column:1/3;flex-direction:row;align-items:center;gap:36px;padding:26px 36px">
+        <div style="flex:1">
+          <div class="eyebrow" data-i="camera">How a box gets here</div>
+          <h3 style="margin-top:10px;font-size:32px">Selin photographs the packet once, from her phone</h3>
+        </div>
+        <div class="row" style="gap:14px">
+          <div class="chip">Reader · Nova Lite</div><div class="chip">Identifier · RxNorm</div><div class="chip">Watchman · openFDA</div><div class="chip">Scheduler · asks you</div>
+        </div>
+      </section>
+    </div>
+
+    <div class="help">
+      <div><span class="k"><kbd>OK</kbd> I took it</span><span class="k"><kbd>← →</kbd> other tablet</span><span class="k"><kbd>Back</kbd> home</span></div>
+      <div>Confirmed doses appear on Selin's phone at once</div>
+    </div>
+  </div>
+</div>

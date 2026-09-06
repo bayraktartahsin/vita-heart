@@ -1,19 +1,37 @@
 import React from 'react';
-import {StyleSheet, Text, View, ViewStyle} from 'react-native';
-import {color, radius, space, type} from '../design/tokens';
+import {StyleProp, StyleSheet, Text, View, ViewStyle} from 'react-native';
+import {Icon, IconName} from './Icon';
+import {color, radius, type} from '../design/tokens';
 
-type Props = {title?: string; children: React.ReactNode; style?: ViewStyle; testID?: string};
+type Tint = 'plain' | 'warm' | 'heart' | 'sky';
 
-export function Card({title, children, style, testID}: Props) {
+const TINT: Record<Tint, {bg: string; edge: string}> = {
+  plain: {bg: color.panel, edge: color.hair},
+  warm: {bg: color.warmSoft, edge: color.warmEdge},
+  heart: {bg: color.heartSoft, edge: color.heartEdge},
+  sky: {bg: color.skySoft, edge: color.skyEdge},
+};
+
+export function Eyebrow({icon, children}: {icon?: IconName; children: React.ReactNode}) {
   return (
-    <View style={[styles.card, style]} testID={testID}>
-      {title ? <Text style={styles.title}>{title}</Text> : null}
+    <View style={styles.eyebrow}>
+      {icon ? <Icon name={icon} size={26} /> : null}
+      <Text style={styles.eyebrowText}>{String(children).toUpperCase()}</Text>
+    </View>
+  );
+}
+
+export function Card({tint = 'plain', style, children, testID}: {tint?: Tint; style?: StyleProp<ViewStyle>; children: React.ReactNode; testID?: string}) {
+  const t = TINT[tint];
+  return (
+    <View testID={testID} style={[styles.card, {backgroundColor: t.bg, borderColor: t.edge}, style]}>
       {children}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {backgroundColor: color.panel, borderRadius: radius.card, padding: space.l, gap: space.s},
-  title: {color: color.textDim, fontSize: type.small, letterSpacing: 1.5, textTransform: 'uppercase'},
+  card: {borderRadius: radius.card, borderWidth: 1, paddingVertical: 36, paddingHorizontal: 40, gap: 18, overflow: 'hidden'},
+  eyebrow: {flexDirection: 'row', alignItems: 'center', gap: 14},
+  eyebrowText: {fontSize: type.micro, letterSpacing: 3.4, color: color.dim, fontWeight: '600'},
 });

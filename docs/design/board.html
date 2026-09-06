@@ -1,0 +1,105 @@
+<!doctype html><meta charset="utf-8"><title>Vita Heart · Morning Board</title>
+<link rel="stylesheet" href="kit.css"><script src="icons.js"></script>
+<style>
+  .grid{display:grid;grid-template-columns:1.18fr .82fr;grid-template-rows:auto 1fr;gap:26px}
+  .hero{grid-row:1/3;gap:22px}
+  .dose{display:flex;align-items:center;gap:30px;padding:24px 28px;border-radius:30px;background:rgba(0,0,0,.32);border:1px solid var(--hair)}
+  .dose b{font-size:38px;font-weight:600;display:block;letter-spacing:-.3px}
+  .dose span{font-size:25px;color:var(--dim);display:block;margin-top:4px}
+  /* the box, as he sees it in the kitchen: he matches the packet, not the word */
+  .box{width:186px;height:132px;border-radius:22px;flex:none;position:relative;overflow:hidden;
+    background:linear-gradient(150deg,#FBF7EF,#E6DFD2);box-shadow:0 14px 34px rgba(0,0,0,.4)}
+  .box .band{position:absolute;left:0;right:0;top:0;height:34px;background:linear-gradient(90deg,#E2452F,#F2704E)}
+  .box .nm{position:absolute;left:16px;right:16px;top:46px;color:#1B1A17;font-weight:700;font-size:24px;line-height:1.1;letter-spacing:-.2px}
+  .box .mg{position:absolute;left:16px;bottom:14px;color:#5C574E;font-weight:600;font-size:19px;white-space:nowrap}
+  .box .bar{position:absolute;right:14px;bottom:12px;width:44px;height:26px;
+    background:repeating-linear-gradient(90deg,#1B1A17 0 3px,transparent 3px 6px)}
+  .safety{display:flex;align-items:center;gap:16px;padding:20px 24px;border-radius:22px;font-size:25px;line-height:1.3;
+    color:#FFD9A1;background:rgba(245,177,76,.12);border:1px solid rgba(245,177,76,.32)}
+  .safety svg{width:30px;height:30px;flex:none;color:var(--warm)}
+  .beat{width:100%;height:120px;margin-top:4px}
+  .beat path{fill:none;stroke:var(--heart);stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round}
+  .beat path.ghost{stroke:rgba(255,111,97,.22)}
+  .msg{font-family:Fraunces,Georgia,serif;font-size:37px;line-height:1.28;font-weight:400}
+  .who{width:60px;height:60px;border-radius:50%;flex:none;display:grid;place-items:center;font-weight:700;font-size:25px;color:#06131F;
+    background:linear-gradient(140deg,#A8D8FF,var(--sky))}
+  .grid > .card > div > .band{display:flex;gap:12px;margin-top:6px}
+  .grid .band i{flex:1;height:10px;border-radius:6px;background:var(--panel-2)}
+  .band i.done{background:var(--calm)}
+  .band i.now{background:var(--warm);box-shadow:0 0 0 4px rgba(245,177,76,.18)}
+</style>
+<div class="tv">
+  <div class="rail">
+    <div class="mark"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#20160A" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12.5h3.6l2-5.4 3.1 10.4 2.9-8 1.8 3h5.6"/></svg></div>
+    <nav class="nav"><a class="on" data-i="home"></a><a data-i="pill"></a><a data-i="heart"></a><a data-i="family"></a></nav>
+    <div class="foot-ico" data-i="shield"></div>
+  </div>
+  <div class="page">
+    <div class="head">
+      <div><h1>Günaydın, <em>Ahmet</em></h1><div class="sub">Saturday 6 September · 08:12 · Istanbul</div></div>
+      <div class="live"><b></b>live</div>
+    </div>
+
+    <div class="grid">
+      <section class="card tint-warm hero">
+        <div>
+          <div class="eyebrow" data-i="clock">This morning</div>
+          <h2 style="margin-top:14px">One tablet, with breakfast</h2>
+          <p style="margin-top:10px">Due now. Selin photographed the box on Thursday.</p>
+        </div>
+
+        <div class="dose">
+          <div class="box"><div class="band"></div><div class="nm">CORASPIN</div><div class="mg">100 mg · 30 tb</div><div class="bar"></div></div>
+          <div style="flex:1">
+            <b>One Coraspin, 100 mg</b>
+            <span>Aspirin, confirmed against the pharmacist database</span>
+            <span style="color:var(--warm-2);margin-top:10px">After food · the red box in the kitchen drawer</span>
+          </div>
+          <div class="chip warm" data-i="clock">08:00</div>
+        </div>
+
+        <div class="safety" data-i="shield">A batch of aspirin was recalled last month. Ask the pharmacist: “is lot 25A007 affected?”</div>
+
+        <div>
+          <div class="band"><i class="now"></i><i></i><i></i><i></i></div>
+          <p style="font-size:23px;margin-top:12px">Morning · midday · evening · night</p>
+        </div>
+
+        <div class="row" style="margin-top:auto">
+          <div class="btn on" data-i="check">I'm up</div>
+          <div class="btn quiet" data-i="pill">Show me the tablet</div>
+        </div>
+      </section>
+
+      <section class="card tint-heart">
+        <div class="eyebrow" data-i="heart">Resting heart rate</div>
+        <div class="spread" style="align-items:flex-end">
+          <div class="big" style="font-size:132px;color:var(--heart)">61</div>
+          <div style="text-align:right"><p style="font-size:25px;line-height:1.3">beats per minute<br>while he slept</p></div>
+        </div>
+        <svg class="beat" viewBox="0 0 620 120" preserveAspectRatio="none" style="margin-top:auto;margin-bottom:-8px">
+          <path class="ghost" d="M0,74 L74,74 L88,74 L96,50 L106,96 L118,30 L130,84 L142,74 L206,74 L220,74 L228,52 L238,94 L250,34 L262,84 L274,74 L338,74 L352,74 L360,54 L370,92 L382,36 L394,82 L406,74 L470,74"/>
+          <path d="M406,74 L470,74 L484,74 L492,48 L502,98 L514,26 L526,86 L538,74 L620,74"/>
+        </svg>
+      </section>
+
+      <section class="card">
+        <div class="eyebrow" data-i="mail">From Selin, last night</div>
+        <div class="row" style="align-items:flex-start;margin-top:6px">
+          <div class="who">S</div>
+          <div><div class="msg">Baba, akşam arayacağım. İlaçlarını unutma.</div>
+          <p style="font-size:23px;margin-top:12px">Yesterday, 22:40</p></div>
+        </div>
+        <div class="spread" style="margin-top:auto">
+          <div class="chip calm" style="font-size:23px" data-i="check">Summary read</div>
+          <div class="btn quiet" style="padding:18px 30px;font-size:26px" data-i="family">Family</div>
+        </div>
+      </section>
+    </div>
+
+    <div class="help">
+      <div><span class="k"><kbd>OK</kbd> choose</span><span class="k"><kbd>← → ↑ ↓</kbd> move</span><span class="k"><kbd>Back</kbd> home</span></div>
+      <div>Night Watch writes to Selin at 21:00</div>
+    </div>
+  </div>
+</div>

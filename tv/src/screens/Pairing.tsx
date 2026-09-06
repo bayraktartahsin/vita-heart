@@ -1,7 +1,8 @@
 import React, {useState} from 'react';
 import {StyleSheet, Text, View} from 'react-native';
 import {BigButton} from '../components/BigButton';
-import {color, space, type} from '../design/tokens';
+import {Card, Eyebrow} from '../components/Card';
+import {color, type} from '../design/tokens';
 
 const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'.split('');
 
@@ -15,25 +16,29 @@ export function Pairing({onPaired, initial = 'AHMET1'}: {onPaired: (code: string
     setSlots(s => s.map((c, j) => (j === i ? CHARS[(CHARS.indexOf(c) + dir + CHARS.length) % CHARS.length] : c)));
   return (
     <View style={styles.root} testID="pairing">
-      <Text style={styles.h1}>Enter the code from the family's phone</Text>
-      <View style={styles.slots}>
-        {slots.map((c, i) => (
-          <View key={i} style={styles.slot}>
-            <BigButton label="▲" tone="quiet" onPress={() => bump(i, 1)} testID={`up-${i}`} />
-            <Text style={styles.char}>{c}</Text>
-            <BigButton label="▼" tone="quiet" onPress={() => bump(i, -1)} testID={`down-${i}`} />
-          </View>
-        ))}
-      </View>
-      <BigButton label="Connect" onPress={() => onPaired(slots.join(''))} hasTVPreferredFocus testID="connect" />
+      <Card style={styles.card}>
+        <Eyebrow icon="family">Connect this television</Eyebrow>
+        <Text style={styles.h1}>Enter the code from the family's phone</Text>
+        <View style={styles.slots}>
+          {slots.map((c, i) => (
+            <View key={i} style={styles.slot}>
+              <BigButton label="Up" tone="quiet" compact onPress={() => bump(i, 1)} testID={`up-${i}`} />
+              <Text style={styles.char}>{c}</Text>
+              <BigButton label="Down" tone="quiet" compact onPress={() => bump(i, -1)} testID={`down-${i}`} />
+            </View>
+          ))}
+        </View>
+        <BigButton label="Connect" icon="check" onPress={() => onPaired(slots.join(''))} hasTVPreferredFocus testID="connect" />
+      </Card>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {flex: 1, justifyContent: 'center', alignItems: 'center', gap: space.xl},
-  h1: {color: color.text, fontSize: type.h2, fontWeight: '700'},
-  slots: {flexDirection: 'row', gap: space.m},
-  slot: {alignItems: 'center', gap: space.s},
-  char: {color: color.warm, fontSize: type.hero, fontWeight: '700', width: 110, textAlign: 'center'},
+  root: {flex: 1, justifyContent: 'center', alignItems: 'center'},
+  card: {alignItems: 'center', gap: 28, paddingVertical: 52, paddingHorizontal: 72},
+  h1: {fontFamily: 'serif', fontSize: type.h2, lineHeight: 58, color: color.text, textAlign: 'center'},
+  slots: {flexDirection: 'row', gap: 20},
+  slot: {alignItems: 'center', gap: 14},
+  char: {fontFamily: 'serif', fontSize: 104, lineHeight: 112, color: color.warm2, width: 104, textAlign: 'center'},
 });

@@ -1,0 +1,95 @@
+<!doctype html><meta charset="utf-8"><title>Vita Heart · Heart Session</title>
+<link rel="stylesheet" href="kit.css"><script src="icons.js"></script>
+<style>
+  .page{padding:44px 72px 34px;grid-template-rows:auto 1fr auto;gap:22px}
+  .stage{display:grid;grid-template-columns:.95fr 1.05fr;gap:26px}
+  .now{position:relative;display:flex;flex-direction:column;justify-content:center;gap:6px}
+  .bpm{font-family:Fraunces,Georgia,serif;font-weight:600;font-size:300px;line-height:.82;letter-spacing:-14px;color:var(--heart);
+    text-shadow:0 24px 90px rgba(255,111,97,.4)}
+  .bpm-unit{font-family:Inter;font-size:30px;letter-spacing:2px;text-transform:uppercase;color:var(--dim);font-weight:600;margin-top:10px}
+  .src{display:inline-flex;align-items:center;gap:14px;padding:16px 26px;border-radius:var(--r-pill);font-size:26px;font-weight:600;
+    color:var(--heart);background:rgba(255,111,97,.13);border:1px solid rgba(255,111,97,.34);align-self:flex-start;margin-top:22px}
+  .src b{width:12px;height:12px;border-radius:50%;background:var(--heart);box-shadow:0 0 0 6px rgba(255,111,97,.2)}
+  .zone{margin-top:34px}
+  .zonebar{position:relative;height:22px;border-radius:12px;background:var(--panel-2);overflow:hidden}
+  .zonebar .in{position:absolute;left:34%;width:32%;top:0;bottom:0;background:linear-gradient(90deg,rgba(121,201,139,.5),rgba(121,201,139,.75))}
+  .zonebar .me{position:absolute;left:52%;top:-9px;width:6px;height:40px;border-radius:6px;background:#fff;box-shadow:0 0 20px rgba(255,255,255,.7)}
+  .zonelabels{display:flex;justify-content:space-between;font-size:23px;color:var(--dim);margin-top:14px}
+  .trace{position:relative;overflow:hidden}
+  .trace svg{position:absolute;inset:0;width:100%;height:100%}
+  .trace .grid-lines{stroke:rgba(255,255,255,.05);stroke-width:1}
+  .trace .line{fill:none;stroke:var(--heart);stroke-width:4;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 14px rgba(255,111,97,.55))}
+  .trace .fill{fill:url(#g);stroke:none}
+  .trace .band{fill:rgba(121,201,139,.09)}
+  .phase{position:absolute;top:34px;left:36px;right:36px;display:flex;align-items:center;justify-content:space-between}
+  .phase .t{font-family:Fraunces,Georgia,serif;font-size:46px;font-weight:500}
+  .phase .c{font-family:Fraunces,Georgia,serif;font-size:60px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-2px}
+  .coach{display:flex;align-items:center;gap:20px;padding:24px 30px;border-radius:28px;background:rgba(10,13,18,.82);backdrop-filter:blur(10px);
+    border:1px solid var(--hair);position:absolute;left:36px;right:36px;bottom:32px}
+  .coach .av{width:52px;height:52px;border-radius:16px;flex:none;display:grid;place-items:center;color:#20160A;
+    background:linear-gradient(140deg,var(--warm-2),var(--warm))}
+  .coach .av svg{width:26px;height:26px}
+  .coach p{color:var(--text);font-size:29px;font-family:Fraunces,Georgia,serif}
+  .rail-time{display:flex;gap:10px;margin-top:4px}
+  .seg{flex:1;height:58px;border-radius:16px;background:var(--panel);border:1px solid var(--hair);display:flex;align-items:center;
+    justify-content:center;gap:12px;font-size:23px;font-weight:600;color:var(--dim-2);position:relative;overflow:hidden}
+  .seg svg{width:24px;height:24px;flex:none}
+  .seg.done{color:var(--calm);border-color:rgba(121,201,139,.3);background:rgba(121,201,139,.12)}
+  .seg.now{color:#20160A;border-color:transparent;background:linear-gradient(140deg,var(--warm-2),var(--warm));font-weight:700}
+  .seg.now::after{content:"";position:absolute;left:0;bottom:0;height:5px;width:46%;background:rgba(0,0,0,.28)}
+</style>
+<div class="tv">
+  <div class="rail">
+    <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#20160A" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12.5h3.6l2-5.4 3.1 10.4 2.9-8 1.8 3h5.6"/></svg></div>
+    <nav class="nav"><a data-i="home"></a><a data-i="pill"></a><a class="on" data-i="heart"></a><a data-i="family"></a></nav>
+    <div class="foot-ico" data-i="shield"></div>
+  </div>
+  <div class="page">
+    <div class="head">
+      <div><h1>Ten minutes, <em>seated</em></h1><div class="sub">Minute 4 of 10 · second set</div></div>
+      <div class="live"><b></b>Watch connected</div>
+    </div>
+
+    <div class="stage">
+      <section class="card tint-heart now">
+        <div class="eyebrow" data-i="heart">Right now</div>
+        <div class="bpm">96</div>
+        <div class="bpm-unit">beats per minute</div>
+        <div class="src"><b></b>live from your Apple Watch</div>
+        <div class="zone">
+          <div class="zonebar"><div class="in"></div><div class="me"></div></div>
+          <div class="zonelabels"><span>easy 79</span><span style="color:var(--calm)">gentle range</span><span>ceiling 103</span></div>
+        </div>
+      </section>
+
+      <section class="card trace">
+        <svg viewBox="0 0 900 620" preserveAspectRatio="none">
+          <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="rgba(255,111,97,.32)"/><stop offset="1" stop-color="rgba(255,111,97,0)"/></linearGradient></defs>
+          <g class="grid-lines"><line x1="0" y1="160" x2="900" y2="160"/><line x1="0" y1="236" x2="900" y2="236"/><line x1="0" y1="412" x2="900" y2="412"/><line x1="0" y1="510" x2="900" y2="510"/></g>
+          <rect class="band" x="0" y="236" width="900" height="176"/>
+          <path class="fill" d="M0,470 C60,462 92,392 142,378 C192,364 224,432 274,414 C324,396 356,268 406,256 C456,244 488,318 538,300 C588,282 620,214 670,206 C720,198 752,268 802,258 C842,248 852,214 862,222 L862,620 L0,620 Z"/>
+          <path class="line" d="M0,470 C60,462 92,392 142,378 C192,364 224,432 274,414 C324,396 356,268 406,256 C456,244 488,318 538,300 C588,282 620,214 670,206 C720,198 752,268 802,258 C842,248 852,214 862,222"/>
+          <circle cx="862" cy="222" r="11" fill="#FF6F61"/><circle cx="862" cy="222" r="23" fill="none" stroke="rgba(255,111,97,.45)" stroke-width="3"/>
+        </svg>
+        <div class="phase"><div><div class="eyebrow" data-i="beat" style="margin-bottom:10px">Last four minutes · gentle range shaded</div><div class="t">Move gently</div></div><div class="c">1:12</div></div>
+        <div class="coach"><div class="av"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2.5 4.5 13.8h6.2L10 21.5l8.6-11.4h-6.3z"/></svg></div><p>Good pace. Shoulders soft, keep breathing through your nose.</p></div>
+      </section>
+    </div>
+
+    <div>
+      <div class="rail-time">
+        <div class="seg done" data-i="check"><span>Warm up 2:00</span></div>
+        <div class="seg done" data-i="check"><span>Move 3:00</span></div>
+        <div class="seg done" data-i="check"><span>Rest 1:00</span></div>
+        <div class="seg now">Move 3:00</div>
+        <div class="seg">Cool down 1:00</div>
+      </div>
+    </div>
+
+    <div class="help">
+      <div><span class="k"><kbd>OK</kbd> pause</span><span class="k"><kbd>Back</kbd> stop and save</span></div>
+      <div>The set shortens itself if recovery is slow</div>
+    </div>
+  </div>
+</div>
