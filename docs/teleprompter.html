@@ -1,0 +1,53 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vita Heart · teleprompter</title>
+<style>
+  body { margin: 0; background: #000; color: #fff; font: 44px/1.35 -apple-system, system-ui, sans-serif; }
+  #bar { position: fixed; top: 0; left: 0; right: 0; padding: 10px 18px; background: #111; font-size: 20px; display: flex; gap: 18px; align-items: center; z-index: 2; }
+  #bar b { color: #f2a93b; font-variant-numeric: tabular-nums; font-size: 26px; }
+  #bar button { font: inherit; padding: 6px 12px; border-radius: 8px; border: 0; background: #333; color: #fff; }
+  main { padding: 120px 8vw 60vh; }
+  .t { color: #f2a93b; font-size: 26px; letter-spacing: 2px; margin: 48px 0 8px; }
+  .say { margin: 0 0 18px; }
+  .do { color: #7fb77e; font-size: 30px; margin: 0 0 12px; }
+  .rec { color: #8fa3b8; font-size: 24px; margin: 0 0 12px; }
+  .now { outline: 3px solid #f2a93b; outline-offset: 12px; border-radius: 6px; }
+</style>
+<div id="bar"><b id="clock">0:00</b><button id="start">Start (space)</button><button id="reset">Reset</button><span>Speed</span><input id="speed" type="range" min="0" max="3" step="0.1" value="1.2"><span id="mark"></span></div>
+<main id="m"></main>
+<script>
+const S=[
+ [0,'SETUP · scene 1 TV','This is Vita Heart, a Fire TV app on Vega OS. It turns the television an older parent already watches into their health room. Ahmet is seventy-two and lives alone in Istanbul. His daughter Selin lives in Ankara. Everything you are about to see is live: the television, the agents, the Watch, and the front door.','',''],
+ [20,'MORNING BOARD · scene 1','Günaydın Ahmet. One tablet due. One line from Selin. One button.','[Return] on I\'m up · [F2] phone · [F1] back',''],
+ [26,'','Selin\'s phone knows in under a second, through one events channel that every screen in this system shares.','','Recovery: keep talking; the tick arrives within two seconds.'],
+ [35,'MEDICATION MOMENT · scene 1','These boxes were photographed once, by Selin, from her phone. Amazon Nova Lite read the print. RxNorm confirmed what it is. openFDA found live recalls, against specific batches.','[↓] Show me · [Return]',''],
+ [45,'','The television does not say "recalled". It gives him the question to ask the pharmacist.','[Return] on I took it',''],
+ [50,'','Taken. That is now a fact the family and Alexa+ can both see.','','Recovery: "the dose window is later today; here is the list from this morning."'],
+ [55,'ALEXA+ · scene 3 BROWSER','How is Dad doing today?','[F3] · click mic · wait ~4 s',''],
+ [62,'','Tell Vita Heart he took the evening Glifor already.','click mic · then [F1]','Recovery: type the sentence, press Enter, say nothing about it.'],
+ [68,'','Voice, the remote, and the screen, in one flow. That was a real MCP server on the 2025 spec over Streamable HTTP, with OAuth 2.1 PKCE. Anonymous calls get a bare 401, exactly as the Alexa+ toolkit requires. The toolkit itself is partner-only today, so this surface is the sanctioned simulation; the server behind it is the real one.','',''],
+ [75,'HEART SESSION · scene 1 then wrist','','[Escape] · [→] Start with my Watch · [Return] · tap Start on the Watch · [F2] wrist 5 s · [F1]',''],
+ [85,'','That is his real heart rate, from his own Watch, on his own television. Ten minutes, seated. The coach adapts: twenty seconds above the ceiling ends the set early and extends the rest; slow recovery shortens the next set. When a recording is used instead of a wrist, the screen says so. Nothing here is synthetic.','let the trace draw 15 s · [Return] on Stop','Recovery: "the Watch is out of range, so here is a recorded session, labelled as such."'],
+ [105,'THE FRONT DOOR · scene 4 TERMINAL','Ring sensors at the door and in the hall. These events are signed exactly as Ring signs them. They are simulated, because there is no Ring device in this flat, and the summary will say so.','[F4] · [Return] on the prepared command',''],
+ [115,'FAMILY · scene 1 then 2','Every tool call the agents made is on the screen, in his living room. Nothing is said about him behind his back.','[F1] · [↓] Family · [Return] · then [F2]',''],
+ [125,'','"Selin, this morning at 03:10 the front door opened, the hall has been under 18 degrees since 06:00, he took both tablets, and did his seated session."','read from the phone',''],
+ [130,'','Strands agents on Bedrock AgentCore wrote that from facts only. The Scribe holds no tools, by design. She gets it by email at nine.','',''],
+ [135,'PAYOFF · scene 1','Why the television. Adults over sixty-five watch more television than any other age group, and their children live somewhere else. Vita Heart is native on Vega OS, multi-modal, it adapts to the household, and it connects the living room, the front door and the cloud: Lambda, DynamoDB, EventBridge, SNS, and Strands agents on AgentCore. It is backed by Vita, our shipping iOS health app. The repository has thirty-seven tests, a thirteen-entry friction log, an open-source package for Ring webhooks, and testing instructions with a live household for the judges. Thank you.','[F1] · stop recording after 2 s of silence',''],
+ [170,'END','','','']
+];
+const m=document.getElementById('m');
+S.forEach((s,i)=>{const d=document.createElement('section'); d.id='s'+i; d.dataset.t=s[0];
+ d.innerHTML=(s[1]?`<div class="t">${fmt(s[0])} · ${s[1]}</div>`:`<div class="t">${fmt(s[0])}</div>`)+(s[2]?`<p class="say">${s[2]}</p>`:'')+(s[3]?`<p class="do">${s[3]}</p>`:'')+(s[4]?`<p class="rec">${s[4]}</p>`:''); m.appendChild(d);});
+function fmt(t){return Math.floor(t/60)+':'+String(t%60).padStart(2,'0');}
+let running=false, t0=0, elapsed=0, raf;
+const clock=document.getElementById('clock'), speed=document.getElementById('speed'), mark=document.getElementById('mark');
+function tick(){ if(running){ elapsed=(performance.now()-t0)/1000; } clock.textContent=fmt(Math.floor(elapsed));
+ let cur=null; document.querySelectorAll('section').forEach(s=>{ if(+s.dataset.t<=elapsed) cur=s; s.classList.remove('now'); });
+ if(cur){ cur.classList.add('now'); mark.textContent = cur.querySelector('.t')?.textContent||''; }
+ if(running){ window.scrollBy(0, 0.9*speed.value); } raf=requestAnimationFrame(tick); }
+function toggle(){ if(running){ running=false; } else { t0=performance.now()-elapsed*1000; running=true; } document.getElementById('start').textContent=running?'Pause (space)':'Start (space)'; }
+document.getElementById('start').onclick=toggle; document.getElementById('reset').onclick=()=>{running=false; elapsed=0; window.scrollTo(0,0); document.getElementById('start').textContent='Start (space)';};
+document.addEventListener('keydown',e=>{ if(e.code==='Space'){e.preventDefault(); toggle();} });
+tick();
+</script>
