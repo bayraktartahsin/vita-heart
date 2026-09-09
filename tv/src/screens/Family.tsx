@@ -4,7 +4,7 @@ import type {Message, Summary, TraceStep, VitaHeartApi} from '../api/client';
 import {BigButton} from '../components/BigButton';
 import {Card, Eyebrow} from '../components/Card';
 import {Chip} from '../components/Chip';
-import {color, type} from '../design/tokens';
+import {s, color, type} from '../design/tokens';
 
 type Props = {api: VitaHeartApi; onBack: () => void; refreshKey: number};
 
@@ -97,25 +97,25 @@ export function Family({api, onBack, refreshKey}: Props) {
 }
 
 const styles = StyleSheet.create({
-  wrap: {flex: 1, flexDirection: 'row', gap: 26},
-  left: {flex: 1.15, gap: 24},
+  wrap: {flex: 1, flexDirection: 'row', gap: s(26)},
+  left: {flex: 1.15, gap: s(24)},
   summary: {flex: 1},
-  para: {fontFamily: 'serif', fontSize: 33, lineHeight: 45, color: color.text},
-  p: {fontSize: type.small, lineHeight: 34, color: color.dim},
-  sig: {flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 4},
-  msgCard: {paddingVertical: 26, paddingHorizontal: 36},
-  msgRow: {flexDirection: 'row', gap: 20, alignItems: 'flex-start'},
+  para: {fontFamily: 'serif', fontSize: s(33), lineHeight: s(45), color: color.text},
+  p: {fontSize: type.small, lineHeight: s(34), color: color.dim},
+  sig: {flexDirection: 'row', flexWrap: 'wrap', gap: s(12), marginTop: s(4)},
+  msgCard: {paddingVertical: s(26), paddingHorizontal: s(36)},
+  msgRow: {flexDirection: 'row', gap: s(20), alignItems: 'flex-start'},
   msgTextWrap: {flex: 1},
-  who: {width: 56, height: 56, borderRadius: 28, backgroundColor: color.sky, alignItems: 'center', justifyContent: 'center'},
-  whoText: {fontSize: 24, fontWeight: '700', color: '#06131F'},
-  msg: {fontFamily: 'serif', fontSize: 29, lineHeight: 38, color: color.text},
-  msgWhen: {fontSize: 22, color: color.dim, marginTop: 8},
-  traceCard: {flex: 0.85, paddingVertical: 30, paddingHorizontal: 34},
+  who: {width: s(56), height: s(56), borderRadius: s(28), backgroundColor: color.sky, alignItems: 'center', justifyContent: 'center'},
+  whoText: {fontSize: s(24), fontWeight: '700', color: '#06131F'},
+  msg: {fontFamily: 'serif', fontSize: s(29), lineHeight: s(38), color: color.text},
+  msgWhen: {fontSize: s(22), color: color.dim, marginTop: s(8)},
+  traceCard: {flex: 0.85, paddingVertical: s(30), paddingHorizontal: s(34)},
   traceList: {flex: 1},
-  step: {flexDirection: 'row', gap: 18, paddingVertical: 13, borderTopWidth: 1, borderTopColor: color.hair},
-  stepFirst: {borderTopWidth: 0, paddingTop: 4},
-  agent: {width: 118, fontSize: 18, letterSpacing: 1.6, fontWeight: '700', lineHeight: 23},
-  stepText: {flex: 1, fontSize: 23, lineHeight: 31, color: color.dim},
-  foot: {marginTop: 14},
-  back: {position: 'absolute', left: 0, bottom: -2},
+  step: {flexDirection: 'row', gap: s(18), paddingVertical: s(13), borderTopWidth: 1, borderTopColor: color.hair},
+  stepFirst: {borderTopWidth: 0, paddingTop: s(4)},
+  agent: {width: s(118), fontSize: s(18), letterSpacing: s(1.6), fontWeight: '700', lineHeight: s(23)},
+  stepText: {flex: 1, fontSize: s(23), lineHeight: s(31), color: color.dim},
+  foot: {marginTop: s(14)},
+  back: {position: 'absolute', left: s(0), bottom: s(-2)},
 });

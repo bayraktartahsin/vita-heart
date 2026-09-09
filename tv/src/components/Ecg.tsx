@@ -1,6 +1,6 @@
 import React from 'react';
 import Svg, {Circle, Defs, LinearGradient, Path, Rect, Stop} from '@amazon-devices/react-native-svg';
-import {color} from '../design/tokens';
+import {color, s} from '../design/tokens';
 
 /** A resting trace: four beats, the last one drawn brighter. Decorative, and honest about it. */
 export function EcgResting({width = 620, height = 120}: {width?: number; height?: number}) {
@@ -8,8 +8,8 @@ export function EcgResting({width = 620, height = 120}: {width?: number; height?
   const now = 'M406,74 L470,74 L484,74 L492,48 L502,98 L514,26 L526,86 L538,74 L620,74';
   return (
     <Svg width={width} height={height} viewBox="0 0 620 120">
-      <Path d={past} stroke="rgba(255,111,97,0.22)" strokeWidth={3.4} fill="none" strokeLinecap="round" strokeLinejoin="round" />
-      <Path d={now} stroke={color.heart} strokeWidth={3.4} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      <Path d={past} stroke="rgba(255,111,97,0.22)" strokeWidth={Math.max(1.5, s(3.4))} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      <Path d={now} stroke={color.heart} strokeWidth={Math.max(1.5, s(3.4))} fill="none" strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
   );
 }
@@ -40,9 +40,9 @@ export function EcgSession({
       </Defs>
       <Rect x="0" y={y(ceiling)} width={W} height={Math.max(0, y(floor) - y(ceiling))} fill="rgba(121,201,139,0.09)" />
       {pts.length > 1 ? <Path d={`${line} L${(pts.length - 1) * step},${H} L0,${H} Z`} fill="url(#under)" /> : null}
-      {pts.length > 1 ? <Path d={line} stroke={color.heart} strokeWidth={5} fill="none" strokeLinecap="round" strokeLinejoin="round" /> : null}
-      {last ? <Circle cx={last.x} cy={last.y} r={11} fill={color.heart} /> : null}
-      {last ? <Circle cx={last.x} cy={last.y} r={23} stroke="rgba(255,111,97,0.45)" strokeWidth={3} fill="none" /> : null}
+      {pts.length > 1 ? <Path d={line} stroke={color.heart} strokeWidth={Math.max(2, s(5))} fill="none" strokeLinecap="round" strokeLinejoin="round" /> : null}
+      {last ? <Circle cx={last.x} cy={last.y} r={s(11)} fill={color.heart} /> : null}
+      {last ? <Circle cx={last.x} cy={last.y} r={s(23)} stroke="rgba(255,111,97,0.45)" strokeWidth={Math.max(1.5, s(3))} fill="none" /> : null}
     </Svg>
   );
 }

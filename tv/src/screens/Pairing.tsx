@@ -2,7 +2,7 @@ import React, {useState} from 'react';
 import {StyleSheet, Text, View} from 'react-native';
 import {BigButton} from '../components/BigButton';
 import {Card, Eyebrow} from '../components/Card';
-import {color, type} from '../design/tokens';
+import {s, color, type} from '../design/tokens';
 
 const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'.split('');
 
@@ -17,14 +17,13 @@ export function Pairing({onPaired, initial = 'AHMET1'}: {onPaired: (code: string
   return (
     <View style={styles.root} testID="pairing">
       <Card style={styles.card}>
-        <Eyebrow icon="family">Connect this television</Eyebrow>
-        <Text style={styles.h1}>Enter the code from the family's phone</Text>
+        <Eyebrow icon="family">Enter the code shown on the family's phone</Eyebrow>
         <View style={styles.slots}>
           {slots.map((c, i) => (
             <View key={i} style={styles.slot}>
-              <BigButton label="Up" tone="quiet" compact onPress={() => bump(i, 1)} testID={`up-${i}`} />
+              <BigButton label="▲" tone="quiet" compact onPress={() => bump(i, 1)} testID={`up-${i}`} />
               <Text style={styles.char}>{c}</Text>
-              <BigButton label="Down" tone="quiet" compact onPress={() => bump(i, -1)} testID={`down-${i}`} />
+              <BigButton label="▼" tone="quiet" compact onPress={() => bump(i, -1)} testID={`down-${i}`} />
             </View>
           ))}
         </View>
@@ -36,9 +35,9 @@ export function Pairing({onPaired, initial = 'AHMET1'}: {onPaired: (code: string
 
 const styles = StyleSheet.create({
   root: {flex: 1, justifyContent: 'center', alignItems: 'center'},
-  card: {alignItems: 'center', gap: 28, paddingVertical: 52, paddingHorizontal: 72},
-  h1: {fontFamily: 'serif', fontSize: type.h2, lineHeight: 58, color: color.text, textAlign: 'center'},
-  slots: {flexDirection: 'row', gap: 20},
-  slot: {alignItems: 'center', gap: 14},
-  char: {fontFamily: 'serif', fontSize: 104, lineHeight: 112, color: color.warm2, width: 104, textAlign: 'center'},
+  card: {alignItems: 'center', gap: s(28), paddingVertical: s(52), paddingHorizontal: s(72)},
+  h1: {fontFamily: 'serif', fontSize: type.h2, lineHeight: s(58), color: color.text, textAlign: 'center'},
+  slots: {flexDirection: 'row', gap: s(20)},
+  slot: {alignItems: 'center', gap: s(14)},
+  char: {fontFamily: 'serif', fontSize: s(104), lineHeight: s(112), color: color.warm2, width: s(104), textAlign: 'center'},
 });

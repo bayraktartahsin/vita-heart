@@ -1,7 +1,7 @@
 import React, {useState} from 'react';
 import {Pressable, StyleSheet, Text} from 'react-native';
 import {Icon, IconName} from './Icon';
-import {color, focus, radius} from '../design/tokens';
+import {s, color, focus, radius} from '../design/tokens';
 
 type Tone = 'warm' | 'quiet' | 'calm' | 'heart';
 const TONE = {
@@ -39,18 +39,18 @@ export function BigButton({
         disabled ? styles.disabled : null,
         focused ? styles.focused : null,
       ]}>
-      {icon ? <Icon name={icon} size={compact ? 26 : 30} tint={t.fg} width={2.4} /> : null}
+      {icon ? <Icon name={icon} size={compact ? s(26) : s(30)} tint={t.fg} width={2.4} /> : null}
       <Text numberOfLines={1} style={[styles.label, compact ? styles.labelCompact : null, {color: t.fg}]}>{label}</Text>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  base: {flexDirection: 'row', alignItems: 'center', gap: 16, paddingVertical: 23, paddingHorizontal: 42,
+  base: {flexDirection: 'row', alignItems: 'center', gap: s(16), paddingVertical: s(23), paddingHorizontal: s(42),
     borderRadius: radius.pill, borderWidth: 1, alignSelf: 'flex-start'},
-  compact: {paddingVertical: 18, paddingHorizontal: 30},
-  label: {fontSize: 33, fontWeight: '700'},
-  labelCompact: {fontSize: 26},
+  compact: {paddingVertical: s(18), paddingHorizontal: s(30)},
+  label: {fontSize: s(33), fontWeight: '700'},
+  labelCompact: {fontSize: s(26)},
   disabled: {opacity: 0.5},
   focused: {borderColor: '#FFFFFF', borderWidth: focus.ring, transform: [{scale: focus.scale}]},
 });

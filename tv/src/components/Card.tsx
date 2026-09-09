@@ -1,7 +1,7 @@
 import React from 'react';
 import {StyleProp, StyleSheet, Text, View, ViewStyle} from 'react-native';
 import {Icon, IconName} from './Icon';
-import {color, radius, type} from '../design/tokens';
+import {s, color, radius, type} from '../design/tokens';
 
 type Tint = 'plain' | 'warm' | 'heart' | 'sky';
 
@@ -15,7 +15,7 @@ const TINT: Record<Tint, {bg: string; edge: string}> = {
 export function Eyebrow({icon, children}: {icon?: IconName; children: React.ReactNode}) {
   return (
     <View style={styles.eyebrow}>
-      {icon ? <Icon name={icon} size={26} /> : null}
+      {icon ? <Icon name={icon} size={s(26)} /> : null}
       <Text style={styles.eyebrowText}>{String(children).toUpperCase()}</Text>
     </View>
   );
@@ -31,7 +31,7 @@ export function Card({tint = 'plain', style, children, testID}: {tint?: Tint; st
 }
 
 const styles = StyleSheet.create({
-  card: {borderRadius: radius.card, borderWidth: 1, paddingVertical: 36, paddingHorizontal: 40, gap: 18, overflow: 'hidden'},
-  eyebrow: {flexDirection: 'row', alignItems: 'center', gap: 14},
-  eyebrowText: {fontSize: type.micro, letterSpacing: 3.4, color: color.dim, fontWeight: '600'},
+  card: {borderRadius: radius.card, borderWidth: 1, paddingVertical: s(36), paddingHorizontal: s(40), gap: s(18), overflow: 'hidden'},
+  eyebrow: {flexDirection: 'row', alignItems: 'center', gap: s(14)},
+  eyebrowText: {fontSize: type.micro, letterSpacing: s(3.4), color: color.dim, fontWeight: '600'},
 });

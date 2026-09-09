@@ -1,6 +1,7 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 // eslint-disable-next-line @amazon-devices/kepler/sdl-package-version-check-imports -- system library, understood
 import {TVFocusGuideView} from '@amazon-devices/react-native-kepler';
+import {Dimensions, PixelRatio} from 'react-native';
 import {ApiError, Board, Dose, LiveEvent, VitaHeartApi} from './api/client';
 import {HelpKeys, Shell} from './components/Shell';
 import {API_BASE_URL, DEFAULT_HOUSEHOLD} from './config';
@@ -52,6 +53,18 @@ export const App = ({apiBaseUrl = API_BASE_URL, household: initialHousehold}: {a
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  // What the television actually gives us, reported once. A ten-foot layout that assumes
+  // 1920x1080 and lands on a smaller logical surface is unreadable, and there is no console.
+  useEffect(() => {
+    const w = Dimensions.get('window');
+    const scr = Dimensions.get('screen');
+    fetch(`${apiBaseUrl}/prompter`, {
+      method: 'POST', headers: {'content-type': 'application/json'},
+      body: JSON.stringify({household: household ?? DEFAULT_HOUSEHOLD, cmd: 'device',
+        value: `window ${w.width}x${w.height} screen ${scr.width}x${scr.height} ratio ${PixelRatio.get()} font ${PixelRatio.getFontScale()}`}),
+    }).catch(() => {});
+  }, [apiBaseUrl, household]);
 
   const onEvent = useCallback((e: LiveEvent) => {
     if (['message', 'checkin', 'dose', 'board', 'med'].includes(e.kind)) {

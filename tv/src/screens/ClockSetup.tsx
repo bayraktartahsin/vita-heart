@@ -2,7 +2,7 @@ import React, {useState} from 'react';
 import {StyleSheet, Text, View} from 'react-native';
 import {BigButton} from '../components/BigButton';
 import {Card, Eyebrow} from '../components/Card';
-import {color, type} from '../design/tokens';
+import {s, color, type} from '../design/tokens';
 
 export const SLOTS = ['morning', 'midday', 'evening', 'night'] as const;
 export type Slot = (typeof SLOTS)[number];
@@ -58,10 +58,10 @@ export function ClockSetup({slotsNeeded, initial = {}, onConfirm, onBack, pendin
 }
 
 const styles = StyleSheet.create({
-  wrap: {flex: 1, gap: 30},
-  lead: {fontSize: type.body, lineHeight: 41, color: color.dim, maxWidth: 1250},
-  row: {flexDirection: 'row', gap: 26},
-  slot: {flex: 1, alignItems: 'center', gap: 20},
-  time: {fontFamily: 'serif', fontSize: 108, lineHeight: 116, color: color.warm2, letterSpacing: -3},
-  actions: {flexDirection: 'row', gap: 22, marginTop: 'auto'},
+  wrap: {flex: 1, gap: s(30)},
+  lead: {fontSize: type.body, lineHeight: s(41), color: color.dim, maxWidth: s(1250)},
+  row: {flexDirection: 'row', gap: s(26)},
+  slot: {flex: 1, alignItems: 'center', gap: s(20)},
+  time: {fontFamily: 'serif', fontSize: s(108), lineHeight: s(116), color: color.warm2, letterSpacing: s(-3)},
+  actions: {flexDirection: 'row', gap: s(22), marginTop: 'auto'},
 });

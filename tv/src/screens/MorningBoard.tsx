@@ -8,7 +8,7 @@ import {Card, Eyebrow} from '../components/Card';
 import {Chip} from '../components/Chip';
 import {EcgResting} from '../components/Ecg';
 import {Icon} from '../components/Icon';
-import {color, type} from '../design/tokens';
+import {s, color, type} from '../design/tokens';
 
 type Props = {
   board: Board | null; error: string | null; live: LiveState;
@@ -71,7 +71,7 @@ export function MorningBoard({board, error, live, onCheckin, onOpenMeds, onOpenF
 
         {recalls > 0 ? (
           <View style={styles.safety}>
-            <Icon name="shield" size={30} tint={color.warm} />
+            <Icon name="shield" size={s(30)} tint={color.warm} />
             <Text style={styles.safetyText}>A batch of this ingredient was recalled. Ask the pharmacist whether your box is affected. Do not stop taking it on your own.</Text>
           </View>
         ) : null}
@@ -102,7 +102,7 @@ export function MorningBoard({board, error, live, onCheckin, onOpenMeds, onOpenF
             <Text style={styles.hr}>{board.restingHeartRate ?? '—'}</Text>
             <Text style={styles.hrUnit}>beats per minute{'\n'}while he slept</Text>
           </View>
-          <View style={styles.ecg}><EcgResting width={560} height={110} /></View>
+          <View style={styles.ecg}><EcgResting width={s(560)} height={s(110)} /></View>
         </Card>
 
         <Card style={styles.msgCard} testID="card-message">
@@ -126,37 +126,37 @@ export function MorningBoard({board, error, live, onCheckin, onOpenMeds, onOpenF
 }
 
 const styles = StyleSheet.create({
-  grid: {flex: 1, flexDirection: 'row', gap: 26},
-  hero: {flex: 1.18, gap: 22},
-  side: {flex: 0.82, gap: 26},
-  centre: {flex: 1, justifyContent: 'center', gap: 20},
-  h2: {fontFamily: 'serif', fontSize: type.h2, lineHeight: 56, color: color.text, marginTop: 14, letterSpacing: -0.5},
-  p: {fontSize: type.body, lineHeight: 41, color: color.dim, marginTop: 10},
-  dose: {flexDirection: 'row', alignItems: 'center', gap: 30, padding: 24, borderRadius: 30,
+  grid: {flex: 1, flexDirection: 'row', gap: s(26)},
+  hero: {flex: 1.18, gap: s(22)},
+  side: {flex: 0.82, gap: s(26)},
+  centre: {flex: 1, justifyContent: 'center', gap: s(20)},
+  h2: {fontFamily: 'serif', fontSize: type.h2, lineHeight: s(56), color: color.text, marginTop: s(14), letterSpacing: s(-0.5)},
+  p: {fontSize: type.body, lineHeight: s(41), color: color.dim, marginTop: s(10)},
+  dose: {flexDirection: 'row', alignItems: 'center', gap: s(30), padding: s(24), borderRadius: s(30),
     backgroundColor: 'rgba(0,0,0,0.32)', borderWidth: 1, borderColor: color.hair},
   doseText: {flex: 1},
-  doseName: {fontSize: 38, fontWeight: '600', color: color.text, letterSpacing: -0.3},
-  doseMeta: {fontSize: type.small, color: color.dim, marginTop: 4},
-  doseWhen: {fontSize: type.small, color: color.warm2, marginTop: 10},
-  safety: {flexDirection: 'row', gap: 16, alignItems: 'flex-start', paddingVertical: 20, paddingHorizontal: 24,
-    borderRadius: 22, backgroundColor: color.warmSoft, borderWidth: 1, borderColor: color.warmEdge},
-  safetyText: {flex: 1, fontSize: type.small, lineHeight: 33, color: color.warmText},
-  band: {flexDirection: 'row', gap: 12},
-  bandSeg: {flex: 1, height: 10, borderRadius: 6, backgroundColor: color.panel2},
+  doseName: {fontSize: s(38), fontWeight: '600', color: color.text, letterSpacing: s(-0.3)},
+  doseMeta: {fontSize: type.small, color: color.dim, marginTop: s(4)},
+  doseWhen: {fontSize: type.small, color: color.warm2, marginTop: s(10)},
+  safety: {flexDirection: 'row', gap: s(16), alignItems: 'flex-start', paddingVertical: s(20), paddingHorizontal: s(24),
+    borderRadius: s(22), backgroundColor: color.warmSoft, borderWidth: 1, borderColor: color.warmEdge},
+  safetyText: {flex: 1, fontSize: type.small, lineHeight: s(33), color: color.warmText},
+  band: {flexDirection: 'row', gap: s(12)},
+  bandSeg: {flex: 1, height: s(10), borderRadius: s(6), backgroundColor: color.panel2},
   bandNow: {backgroundColor: color.warm},
-  bandLabel: {fontSize: 23, color: color.dim, marginTop: 12},
-  actions: {flexDirection: 'row', gap: 22, marginTop: 'auto', alignItems: 'center'},
+  bandLabel: {fontSize: s(23), color: color.dim, marginTop: s(12)},
+  actions: {flexDirection: 'row', gap: s(22), marginTop: 'auto', alignItems: 'center'},
   hrRow: {flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between'},
-  hr: {fontFamily: 'serif', fontSize: type.display, lineHeight: 132, color: color.heart, letterSpacing: -5},
-  hrUnit: {fontSize: type.small, lineHeight: 33, color: color.dim, textAlign: 'right'},
-  ecg: {marginTop: 'auto', marginBottom: -8},
+  hr: {fontFamily: 'serif', fontSize: type.display, lineHeight: s(132), color: color.heart, letterSpacing: s(-5)},
+  hrUnit: {fontSize: type.small, lineHeight: s(33), color: color.dim, textAlign: 'right'},
+  ecg: {marginTop: 'auto', marginBottom: s(-8)},
   msgCard: {flex: 1},
-  msgRow: {flexDirection: 'row', alignItems: 'flex-start', gap: 22, marginTop: 6},
+  msgRow: {flexDirection: 'row', alignItems: 'flex-start', gap: s(22), marginTop: s(6)},
   msgTextWrap: {flex: 1},
-  who: {width: 60, height: 60, borderRadius: 30, backgroundColor: color.sky, alignItems: 'center', justifyContent: 'center'},
-  whoText: {fontSize: 25, fontWeight: '700', color: '#06131F'},
-  msg: {fontFamily: 'serif', fontSize: 37, lineHeight: 47, color: color.text},
-  msgWhen: {fontSize: 23, color: color.dim, marginTop: 12},
-  sideActions: {flexDirection: 'row', gap: 16, marginTop: 'auto'},
-  liveHidden: {position: 'absolute', opacity: 0, fontSize: 1},
+  who: {width: s(60), height: s(60), borderRadius: s(30), backgroundColor: color.sky, alignItems: 'center', justifyContent: 'center'},
+  whoText: {fontSize: s(25), fontWeight: '700', color: '#06131F'},
+  msg: {fontFamily: 'serif', fontSize: s(37), lineHeight: s(47), color: color.text},
+  msgWhen: {fontSize: s(23), color: color.dim, marginTop: s(12)},
+  sideActions: {flexDirection: 'row', gap: s(16), marginTop: 'auto'},
+  liveHidden: {position: 'absolute', opacity: 0, fontSize: s(1)},
 });

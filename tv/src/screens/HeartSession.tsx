@@ -4,7 +4,7 @@ import {BigButton} from '../components/BigButton';
 import {Card, Eyebrow} from '../components/Card';
 import {EcgSession} from '../components/Ecg';
 import {Icon} from '../components/Icon';
-import {color, type} from '../design/tokens';
+import {s, color, type} from '../design/tokens';
 import {SessionState, current, remainingInBlock, summarize, tick} from '../session/engine';
 
 export type SessionSource = 'watch' | 'recorded' | 'synthetic';
@@ -101,10 +101,10 @@ export function HeartSession({state, onTick, latestBpm, source, coachLine, onFin
             <Text style={styles.count} testID="clock">{mmss(remainingInBlock(state))}</Text>
           </View>
           <View style={styles.traceBody}>
-            <EcgSession samples={state.samples} floor={z.workFloor} ceiling={z.workCeiling} width={860} height={360} />
+            <EcgSession samples={state.samples} floor={z.workFloor} ceiling={z.workCeiling} width={s(860)} height={s(360)} />
           </View>
           <View style={styles.coach}>
-            <View style={styles.coachAv}><Icon name="spark" size={26} tint={color.warmInk} width={2.3} /></View>
+            <View style={styles.coachAv}><Icon name="spark" size={s(26)} tint={color.warmInk} width={2.3} /></View>
             <Text style={styles.coachText} testID="coach">{coachLine}</Text>
           </View>
         </Card>
@@ -116,7 +116,7 @@ export function HeartSession({state, onTick, latestBpm, source, coachLine, onFin
           const now = i === state.index;
           return (
             <View key={i} style={[styles.seg, done ? styles.segDone : null, now ? styles.segNow : null]}>
-              {done ? <Icon name="check" size={24} tint={color.calm} /> : null}
+              {done ? <Icon name="check" size={s(24)} tint={color.calm} /> : null}
               <Text style={[styles.segText, done ? styles.segTextDone : null, now ? styles.segTextNow : null]}>
                 {PHASE[b.phase]} {mmss(b.seconds)}
               </Text>
@@ -134,42 +134,42 @@ export function HeartSession({state, onTick, latestBpm, source, coachLine, onFin
 }
 
 const styles = StyleSheet.create({
-  wrap: {flex: 1, gap: 22},
-  stage: {flex: 1, flexDirection: 'row', gap: 26},
+  wrap: {flex: 1, gap: s(22)},
+  stage: {flex: 1, flexDirection: 'row', gap: s(26)},
   now: {flex: 0.95, justifyContent: 'center'},
-  bpm: {fontFamily: 'serif', fontSize: type.hero, lineHeight: 250, color: color.heart, letterSpacing: -14},
-  unit: {fontSize: 30, letterSpacing: 2, color: color.dim, fontWeight: '600', marginTop: 6},
-  src: {flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 16, paddingHorizontal: 26, borderRadius: 999,
-    backgroundColor: color.heartSoft, borderWidth: 1, borderColor: color.heartEdge, alignSelf: 'flex-start', marginTop: 22},
+  bpm: {fontFamily: 'serif', fontSize: type.hero, lineHeight: s(250), color: color.heart, letterSpacing: s(-14)},
+  unit: {fontSize: s(30), letterSpacing: s(2), color: color.dim, fontWeight: '600', marginTop: s(6)},
+  src: {flexDirection: 'row', alignItems: 'center', gap: s(14), paddingVertical: s(16), paddingHorizontal: s(26), borderRadius: s(999),
+    backgroundColor: color.heartSoft, borderWidth: 1, borderColor: color.heartEdge, alignSelf: 'flex-start', marginTop: s(22)},
   srcWaiting: {backgroundColor: color.panel2, borderColor: color.hair},
-  srcDot: {width: 12, height: 12, borderRadius: 6, backgroundColor: color.heart},
-  srcText: {fontSize: 26, fontWeight: '600', color: color.heart},
-  zone: {marginTop: 34},
-  zoneBar: {height: 22, borderRadius: 12, backgroundColor: color.panel2, overflow: 'visible'},
-  zoneIn: {position: 'absolute', left: '34%', width: '32%', top: 0, bottom: 0, backgroundColor: 'rgba(121,201,139,0.6)', borderRadius: 12},
-  zoneMe: {position: 'absolute', top: -9, width: 6, height: 40, borderRadius: 6, backgroundColor: '#FFFFFF'},
-  zoneLabels: {flexDirection: 'row', justifyContent: 'space-between', marginTop: 14},
-  zoneLabel: {fontSize: 23, color: color.dim},
-  trace: {flex: 1.05, paddingVertical: 30, paddingHorizontal: 34},
+  srcDot: {width: s(12), height: s(12), borderRadius: s(6), backgroundColor: color.heart},
+  srcText: {fontSize: s(26), fontWeight: '600', color: color.heart},
+  zone: {marginTop: s(34)},
+  zoneBar: {height: s(22), borderRadius: s(12), backgroundColor: color.panel2, overflow: 'visible'},
+  zoneIn: {position: 'absolute', left: '34%', width: '32%', top: s(0), bottom: s(0), backgroundColor: 'rgba(121,201,139,0.6)', borderRadius: s(12)},
+  zoneMe: {position: 'absolute', top: s(-9), width: s(6), height: s(40), borderRadius: s(6), backgroundColor: '#FFFFFF'},
+  zoneLabels: {flexDirection: 'row', justifyContent: 'space-between', marginTop: s(14)},
+  zoneLabel: {fontSize: s(23), color: color.dim},
+  trace: {flex: 1.05, paddingVertical: s(30), paddingHorizontal: s(34)},
   traceHead: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start'},
-  phase: {fontFamily: 'serif', fontSize: 46, lineHeight: 54, color: color.text, marginTop: 10},
-  count: {fontFamily: 'serif', fontSize: 60, lineHeight: 66, color: color.text, letterSpacing: -2},
-  traceBody: {flex: 1, marginHorizontal: -34, justifyContent: 'center'},
-  coach: {flexDirection: 'row', alignItems: 'center', gap: 20, paddingVertical: 22, paddingHorizontal: 28, borderRadius: 28,
+  phase: {fontFamily: 'serif', fontSize: s(46), lineHeight: s(54), color: color.text, marginTop: s(10)},
+  count: {fontFamily: 'serif', fontSize: s(60), lineHeight: s(66), color: color.text, letterSpacing: s(-2)},
+  traceBody: {flex: 1, marginHorizontal: s(-34), justifyContent: 'center'},
+  coach: {flexDirection: 'row', alignItems: 'center', gap: s(20), paddingVertical: s(22), paddingHorizontal: s(28), borderRadius: s(28),
     backgroundColor: 'rgba(10,13,18,0.82)', borderWidth: 1, borderColor: color.hair},
-  coachAv: {width: 52, height: 52, borderRadius: 16, backgroundColor: color.warm, alignItems: 'center', justifyContent: 'center'},
-  coachText: {flex: 1, fontFamily: 'serif', fontSize: type.body, lineHeight: 39, color: color.text},
-  segs: {flexDirection: 'row', gap: 10},
-  seg: {flex: 1, height: 58, borderRadius: 16, backgroundColor: color.panel, borderWidth: 1, borderColor: color.hair,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12},
+  coachAv: {width: s(52), height: s(52), borderRadius: s(16), backgroundColor: color.warm, alignItems: 'center', justifyContent: 'center'},
+  coachText: {flex: 1, fontFamily: 'serif', fontSize: type.body, lineHeight: s(39), color: color.text},
+  segs: {flexDirection: 'row', gap: s(10)},
+  seg: {flex: 1, height: s(58), borderRadius: s(16), backgroundColor: color.panel, borderWidth: 1, borderColor: color.hair,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: s(12)},
   segDone: {backgroundColor: color.calmSoft, borderColor: color.calmEdge},
   segNow: {backgroundColor: color.warm, borderColor: 'transparent'},
-  segText: {fontSize: 23, fontWeight: '600', color: color.dim2},
+  segText: {fontSize: s(23), fontWeight: '600', color: color.dim2},
   segTextDone: {color: color.calm},
   segTextNow: {color: color.warmInk, fontWeight: '700'},
-  footer: {flexDirection: 'row', alignItems: 'center', gap: 22},
-  note: {fontSize: 23, color: color.dim2},
-  doneWrap: {flex: 1, justifyContent: 'center', gap: 24},
-  doneH: {fontFamily: 'serif', fontSize: type.h1, lineHeight: 90, color: color.text},
-  doneP: {fontSize: type.body, lineHeight: 41, color: color.dim, maxWidth: 1200},
+  footer: {flexDirection: 'row', alignItems: 'center', gap: s(22)},
+  note: {fontSize: s(23), color: color.dim2},
+  doneWrap: {flex: 1, justifyContent: 'center', gap: s(24)},
+  doneH: {fontFamily: 'serif', fontSize: type.h1, lineHeight: s(90), color: color.text},
+  doneP: {fontSize: type.body, lineHeight: s(41), color: color.dim, maxWidth: s(1200)},
 });

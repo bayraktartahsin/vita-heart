@@ -6,7 +6,7 @@ import {BoxThumb} from '../components/BoxThumb';
 import {Card, Eyebrow} from '../components/Card';
 import {Chip} from '../components/Chip';
 import {Icon} from '../components/Icon';
-import {color, type} from '../design/tokens';
+import {s, color, type} from '../design/tokens';
 
 type Props = {doses: Dose[]; onConfirm: (d: Dose) => void; onBack: () => void; onSetClock: () => void; pendingId: string | null};
 
@@ -26,7 +26,7 @@ export function MedicationMoment({doses, onConfirm, onBack, onSetClock, pendingI
         {doses.slice(0, 2).map((d, i) => (
           <Card key={d.id} tint={d.confirmed ? 'plain' : 'warm'} style={[styles.med, d.confirmed ? styles.taken : null]} testID={`dose-${d.id}`}>
             <View style={styles.top}>
-              <BoxThumb name={d.name || 'Unreadable'} strength={d.strength} band={BANDS[i % BANDS.length]} width={172} height={124} />
+              <BoxThumb name={d.name || 'Unreadable'} strength={d.strength} band={BANDS[i % BANDS.length]} width={s(172)} height={s(124)} />
               <View style={styles.info}>
                 <Text style={styles.h3} numberOfLines={2}>{d.name || 'Unreadable box'}{d.strength ? ` ${d.strength}` : ''}</Text>
                 <Text style={styles.meta}>one tablet{d.food ? ` · ${d.food}` : ''}</Text>
@@ -38,7 +38,7 @@ export function MedicationMoment({doses, onConfirm, onBack, onSetClock, pendingI
 
             {d.recallCount > 0 ? (
               <View style={styles.safety}>
-                <Icon name="shield" size={28} tint={color.warm} />
+                <Icon name="shield" size={s(28)} tint={color.warm} />
                 <Text style={styles.safetyText}>A batch of this ingredient was recalled. Ask the pharmacist: “is my lot affected?” Do not stop taking it on your own.</Text>
               </View>
             ) : (
@@ -46,7 +46,7 @@ export function MedicationMoment({doses, onConfirm, onBack, onSetClock, pendingI
             )}
 
             {d.confirmed ? (
-              <View style={styles.done}><Icon name="check" size={30} tint={color.calm} /><Text style={styles.doneText}>Taken</Text></View>
+              <View style={styles.done}><Icon name="check" size={s(30)} tint={color.calm} /><Text style={styles.doneText}>Taken</Text></View>
             ) : (
               <BigButton
                 label={pendingId === d.id ? 'Saving…' : 'I took it'}
@@ -80,24 +80,24 @@ export function MedicationMoment({doses, onConfirm, onBack, onSetClock, pendingI
 }
 
 const styles = StyleSheet.create({
-  wrap: {flex: 1, gap: 24},
-  list: {flex: 1, flexDirection: 'row', gap: 24},
-  med: {flex: 1, gap: 22, paddingVertical: 34, paddingHorizontal: 36},
+  wrap: {flex: 1, gap: s(24)},
+  list: {flex: 1, flexDirection: 'row', gap: s(24)},
+  med: {flex: 1, gap: s(22), paddingVertical: s(34), paddingHorizontal: s(36)},
   taken: {opacity: 0.72},
-  top: {flexDirection: 'row', gap: 26, alignItems: 'flex-start'},
+  top: {flexDirection: 'row', gap: s(26), alignItems: 'flex-start'},
   info: {flex: 1},
-  h3: {fontFamily: 'serif', fontSize: type.h3, lineHeight: 45, color: color.text},
-  meta: {fontSize: type.small, lineHeight: 34, color: color.dim},
+  h3: {fontFamily: 'serif', fontSize: type.h3, lineHeight: s(45), color: color.text},
+  meta: {fontSize: type.small, lineHeight: s(34), color: color.dim},
   metaWarm: {color: color.warm2},
-  safety: {flexDirection: 'row', gap: 14, alignItems: 'flex-start', paddingVertical: 20, paddingHorizontal: 24,
-    borderRadius: 20, backgroundColor: color.warmSoft, borderWidth: 1, borderColor: color.warmEdge},
-  safetyText: {flex: 1, fontSize: 24, lineHeight: 32, color: color.warmText},
-  done: {flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 'auto'},
+  safety: {flexDirection: 'row', gap: s(14), alignItems: 'flex-start', paddingVertical: s(20), paddingHorizontal: s(24),
+    borderRadius: s(20), backgroundColor: color.warmSoft, borderWidth: 1, borderColor: color.warmEdge},
+  safetyText: {flex: 1, fontSize: s(24), lineHeight: s(32), color: color.warmText},
+  done: {flexDirection: 'row', alignItems: 'center', gap: s(14), marginTop: 'auto'},
   doneText: {fontSize: type.body, fontWeight: '600', color: color.calm},
-  strip: {height: 152, flexDirection: 'row', alignItems: 'center', gap: 36, paddingVertical: 26, paddingHorizontal: 36},
+  strip: {height: s(152), flexDirection: 'row', alignItems: 'center', gap: s(36), paddingVertical: s(26), paddingHorizontal: s(36)},
   stripText: {flex: 1},
-  stripH: {fontFamily: 'serif', fontSize: 32, lineHeight: 40, color: color.text, marginTop: 10},
-  stripChips: {flexDirection: 'row', gap: 14},
-  footer: {flexDirection: 'row', alignItems: 'center', gap: 20},
-  count: {marginLeft: 'auto', fontSize: 23, color: color.dim2},
+  stripH: {fontFamily: 'serif', fontSize: s(32), lineHeight: s(40), color: color.text, marginTop: s(10)},
+  stripChips: {flexDirection: 'row', gap: s(14)},
+  footer: {flexDirection: 'row', alignItems: 'center', gap: s(20)},
+  count: {marginLeft: 'auto', fontSize: s(23), color: color.dim2},
 });

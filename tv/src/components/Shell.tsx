@@ -2,7 +2,7 @@ import React from 'react';
 import {StyleSheet, Text, View} from 'react-native';
 import {Backdrop} from './Backdrop';
 import {Icon, IconName} from './Icon';
-import {color, type} from '../design/tokens';
+import {s, color, type} from '../design/tokens';
 
 const TABS: {key: string; icon: IconName}[] = [
   {key: 'board', icon: 'home'},
@@ -26,17 +26,17 @@ export function Shell({
       <Backdrop />
       <View style={styles.rail}>
         <View style={styles.mark}>
-          <Icon name="beat" size={32} tint={color.warmInk} width={2.6} />
+          <Icon name="beat" size={s(32)} tint={color.warmInk} width={2.6} />
         </View>
         <View style={styles.nav}>
           {TABS.map(t => (
             <View key={t.key} style={[styles.navItem, tab === t.key ? styles.navOn : null]}>
               {tab === t.key ? <View style={styles.navBar} /> : null}
-              <Icon name={t.icon} size={32} tint={tab === t.key ? color.text : color.dim2} />
+              <Icon name={t.icon} size={s(32)} tint={tab === t.key ? color.text : color.dim2} />
             </View>
           ))}
         </View>
-        <View style={styles.railFoot}><Icon name="shield" size={26} tint={color.dim2} /></View>
+        <View style={styles.railFoot}><Icon name="shield" size={s(26)} tint={color.dim2} /></View>
       </View>
 
       <View style={styles.page}>
@@ -79,29 +79,29 @@ export function HelpKeys({items, note}: {items: [string, string][]; note?: strin
 
 const styles = StyleSheet.create({
   root: {flex: 1, flexDirection: 'row', backgroundColor: color.ink},
-  rail: {width: 124, paddingTop: 44, paddingBottom: 38, alignItems: 'center', gap: 44,
+  rail: {width: s(124), paddingTop: s(44), paddingBottom: s(38), alignItems: 'center', gap: s(44),
     borderRightWidth: 1, borderRightColor: color.hair, backgroundColor: 'rgba(0,0,0,0.24)'},
-  mark: {width: 60, height: 60, borderRadius: 20, backgroundColor: color.warm, alignItems: 'center', justifyContent: 'center'},
-  nav: {gap: 26, marginTop: 6},
-  navItem: {width: 68, height: 68, borderRadius: 22, alignItems: 'center', justifyContent: 'center'},
+  mark: {width: s(60), height: s(60), borderRadius: s(20), backgroundColor: color.warm, alignItems: 'center', justifyContent: 'center'},
+  nav: {gap: s(26), marginTop: s(6)},
+  navItem: {width: s(68), height: s(68), borderRadius: s(22), alignItems: 'center', justifyContent: 'center'},
   navOn: {backgroundColor: color.panel2, borderWidth: 1, borderColor: color.hair2},
-  navBar: {position: 'absolute', left: -22, top: 19, width: 5, height: 30, borderRadius: 5, backgroundColor: color.warm},
+  navBar: {position: 'absolute', left: s(-22), top: s(19), width: s(5), height: s(30), borderRadius: s(5), backgroundColor: color.warm},
   railFoot: {marginTop: 'auto'},
-  page: {flex: 1, paddingTop: 48, paddingBottom: 34, paddingHorizontal: 72, gap: 26},
+  page: {flex: 1, paddingTop: s(48), paddingBottom: s(34), paddingHorizontal: s(72), gap: s(26)},
   head: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start'},
   headText: {flex: 1},
-  h1: {fontFamily: 'serif', fontSize: type.h1, lineHeight: type.h1, color: color.text, letterSpacing: -2},
+  h1: {fontFamily: 'serif', fontSize: type.h1, lineHeight: type.h1, color: color.text, letterSpacing: s(-2)},
   h1accent: {color: color.warm2},
-  sub: {marginTop: 12, fontSize: 28, color: color.dim, fontWeight: '500'},
-  live: {flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14, paddingHorizontal: 24,
-    borderRadius: 999, backgroundColor: color.panel, borderWidth: 1, borderColor: color.hair},
-  liveDot: {width: 12, height: 12, borderRadius: 6, backgroundColor: color.calm},
+  sub: {marginTop: s(12), fontSize: s(28), color: color.dim, fontWeight: '500'},
+  live: {flexDirection: 'row', alignItems: 'center', gap: s(14), paddingVertical: s(14), paddingHorizontal: s(24),
+    borderRadius: s(999), backgroundColor: color.panel, borderWidth: 1, borderColor: color.hair},
+  liveDot: {width: s(12), height: s(12), borderRadius: s(6), backgroundColor: color.calm},
   liveText: {fontSize: type.small, color: color.dim},
   body: {flex: 1},
-  help: {height: 34, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'},
-  helpRow: {flexDirection: 'row', gap: 28},
-  helpItem: {flexDirection: 'row', alignItems: 'center', gap: 10},
-  kbd: {fontSize: 22, fontWeight: '600', color: color.text, backgroundColor: color.panel2,
-    borderWidth: 1, borderColor: color.hair, borderRadius: 10, paddingVertical: 5, paddingHorizontal: 13, overflow: 'hidden'},
-  helpText: {fontSize: 22, color: color.dim2},
+  help: {height: s(34), flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'},
+  helpRow: {flexDirection: 'row', gap: s(28)},
+  helpItem: {flexDirection: 'row', alignItems: 'center', gap: s(10)},
+  kbd: {fontSize: s(22), fontWeight: '600', color: color.text, backgroundColor: color.panel2,
+    borderWidth: 1, borderColor: color.hair, borderRadius: s(10), paddingVertical: s(5), paddingHorizontal: s(13), overflow: 'hidden'},
+  helpText: {fontSize: s(22), color: color.dim2},
 });

@@ -1,7 +1,7 @@
 import React from 'react';
 import {StyleSheet, Text, View} from 'react-native';
 import {Icon, IconName} from './Icon';
-import {color, radius, type} from '../design/tokens';
+import {s, color, radius, type} from '../design/tokens';
 
 type Tone = 'plain' | 'calm' | 'warm' | 'heart';
 const TONE = {
@@ -15,14 +15,14 @@ export function Chip({icon, tone = 'plain', children, style, testID}: {icon?: Ic
   const t = TONE[tone];
   return (
     <View testID={testID} style={[styles.chip, {backgroundColor: t.bg, borderColor: t.edge}, style]}>
-      {icon ? <Icon name={icon} size={24} tint={t.fg} /> : null}
+      {icon ? <Icon name={icon} size={s(24)} tint={t.fg} /> : null}
       <Text style={[styles.text, {color: t.fg}]}>{children}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  chip: {flexDirection: 'row', alignItems: 'center', gap: 11, paddingVertical: 12, paddingHorizontal: 18,
+  chip: {flexDirection: 'row', alignItems: 'center', gap: s(11), paddingVertical: s(12), paddingHorizontal: s(18),
     borderRadius: radius.chip, borderWidth: 1, alignSelf: 'flex-start'},
   text: {fontSize: type.label, fontWeight: '600'},
 });
