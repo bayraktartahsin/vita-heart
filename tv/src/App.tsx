@@ -22,8 +22,10 @@ const GREETING_SPLIT = (greeting: string): [string, string] => {
 };
 
 export const App = ({apiBaseUrl = API_BASE_URL, household: initialHousehold}: {apiBaseUrl?: string; household?: string}) => {
-  const [household, setHousehold] = useState<string | null>(initialHousehold ?? null);
-  const [screen, setScreen] = useState<Screen>(initialHousehold ? 'board' : 'pairing');
+  // The television is a fixed appliance in one house: it boots to that household's board.
+  // Pairing exists for a set-up that has none, and is reachable by clearing the code.
+  const [household, setHousehold] = useState<string | null>(initialHousehold ?? DEFAULT_HOUSEHOLD ?? null);
+  const [screen, setScreen] = useState<Screen>(initialHousehold || DEFAULT_HOUSEHOLD ? 'board' : 'pairing');
   const [board, setBoard] = useState<Board | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [checkinPending, setCheckinPending] = useState(false);

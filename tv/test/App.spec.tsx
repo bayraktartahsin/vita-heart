@@ -152,9 +152,10 @@ describe('Vita Heart TV', () => {
     await waitFor(() => expect(screen.getByTestId('board-error')).toBeTruthy());
   });
 
-  it('starts on pairing when no household is known', () => {
-    mockFetch({});
+  it('boots straight to the household on the television, not to a set-up screen', async () => {
+    mockFetch({'/board': () => board, '/events': () => new Promise(() => {})});
     render(<App apiBaseUrl="https://api.test" />);
-    expect(screen.getByTestId('pairing')).toBeTruthy();
+    await waitFor(() => expect(screen.getByTestId('morning-board')).toBeTruthy());
+    expect(screen.queryByTestId('pairing')).toBeNull();
   });
 });
