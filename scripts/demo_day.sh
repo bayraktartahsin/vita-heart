@@ -31,16 +31,18 @@ echo "3/5  demo state (a tablet becomes due now)"
 "$PY" "$ROOT/scripts/demo_setup.py" --due-now
 
 echo "4/5  windows"
-# One Chrome window with two tabs, not two windows: OBS cannot tell two identical Chrome
-# windows apart, and a wrong capture is discovered only in the recording. The prompter goes
-# in Safari, a different application, so nothing can be confused for it.
+# One window per OBS scene, and the two page titles differ, so the capture list is
+# unambiguous. The prompter goes in Safari, a different application, so it can never be
+# picked up by a browser capture.
 osascript <<APPLESCRIPT >/dev/null 2>&1 || true
 tell application "Google Chrome"
   activate
-  set w to make new window
-  set URL of active tab of w to "$FAMILY"
-  tell w to make new tab with properties {URL:"$ALEXA"}
-  set bounds of w to {40, 60, 1480, 940}
+  set fam to make new window
+  set URL of active tab of fam to "$FAMILY"
+  set bounds of fam to {40, 60, 1480, 940}
+  set alx to make new window
+  set URL of active tab of alx to "$ALEXA"
+  set bounds of alx to {80, 100, 1520, 980}
 end tell
 APPLESCRIPT
 osascript <<APPLESCRIPT >/dev/null 2>&1 || true
@@ -56,17 +58,19 @@ echo "5/5  pre-flight"
 cat <<'NOTE'
 
 ────────────────────────────────────────────────────────────────────────
-THREE things are recorded, one is not.
+THREE scenes are recorded, one window is not.
 
-  OBS scene   hotkey   one source, filling the frame
-  TV          F1       window · vega-virtual-device
-  WEB         F2       window · Google Chrome   (⌘1 family · ⌘2 Alexa)
-  TERMINAL    F3       window · Terminal
+  OBS scene   hotkey   one window source, filling the frame
+  television  F1       vega-virtual-device
+  family      F2       Chrome · "Vita Heart · Family"
+  alexa       F3       Chrome · "Alexa+ · simulated surface · Vita Heart"
 
   NOT recorded         Safari · the prompter
                        → second screen, then Control-Command-F
 
 One source per scene, and press Command-F on each so it fills the canvas.
+Recording is one continuous take: press Start Recording once, then switch scenes
+with F1, F2 and F3 as the prompter tells you. There is no terminal in the video.
 In the prompter: click "voice on", allow the microphone, press the space bar.
 ────────────────────────────────────────────────────────────────────────
 NOTE
