@@ -27,9 +27,13 @@ echo "3/5  demo state (a dose becomes due now)"
 echo "4/5  pages"
 open -a "Google Chrome" "$API/alexa-sim"
 open -a "Google Chrome" "$API/family?household=AHMET1"
-open "$ROOT/docs/teleprompter.html"
+open -a "Google Chrome" "$API/prompter?household=AHMET1"
 
 echo "5/5  pre-flight"
 "$PY" "$ROOT/scripts/preflight.py"
 echo
-echo "Now: OBS -> Start Recording, then space on the teleprompter, then speak."
+echo "Prompter:  $API/prompter?household=AHMET1     (full screen, press the voice button)"
+echo "Remote:    $API/prompter/remote?household=AHMET1  (open on the phone)"
+echo "Script:    $API/script                            (to read or print)"
+echo
+echo "Now: OBS -> Start Recording, then Start on the phone remote, then speak."

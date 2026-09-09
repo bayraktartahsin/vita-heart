@@ -1,0 +1,38 @@
+<!doctype html>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vita Heart · the script to read</title>
+<script src="/prompter/script.js"></script>
+<style>
+  :root{color-scheme:light}
+  body{margin:0;background:#F7F3EC;color:#14181E;font:19px/1.5 -apple-system,system-ui,sans-serif}
+  main{max-width:820px;margin:0 auto;padding:36px 24px 90px}
+  h1{font-size:34px;margin:0 0 4px} .lede{color:#5C6270;margin:0 0 28px}
+  .b{background:#fff;border-radius:18px;padding:22px 26px;margin-bottom:16px;box-shadow:0 1px 0 #E4DED2;border-left:8px solid #E7E2D7}
+  .b.hero{border-left-color:#FF6F61;background:#FFF7F5}
+  .b.payoff{border-left-color:#F5B14C;background:#FFFBF2}
+  .mark{display:flex;gap:12px;align-items:center;font-size:14px;color:#7A8291;letter-spacing:1px;text-transform:uppercase;font-weight:700}
+  .scene{background:#14181E;color:#fff;border-radius:8px;padding:3px 9px;letter-spacing:1px}
+  .say{font-size:27px;line-height:1.45;margin:12px 0 0;font-weight:500}
+  .do{margin:14px 0 0;display:flex;flex-wrap:wrap;gap:8px}
+  .do span{background:#EAF5EC;color:#2C6B3C;border:1px solid #CBE6D2;border-radius:10px;padding:6px 12px;font-size:15px;font-weight:600}
+  .rec{margin:10px 0 0;color:#8A6A2F;background:#FFF6E3;border:1px solid #F0E0BC;border-radius:10px;padding:10px 12px;font-size:15px}
+  @media print{body{background:#fff}.b{box-shadow:none;border:1px solid #ddd;break-inside:avoid}}
+</style>
+<main>
+  <h1>Vita Heart · the script</h1>
+  <p class="lede">Read the large lines. Green chips are what your hands do. Amber is what to say if something misbehaves: say it and keep going, never stop the recording. Total 2:45.</p>
+  <div id="out"></div>
+</main>
+<script>
+  const S = window.VITA_SCRIPT, out = document.getElementById('out');
+  const mmss = t => Math.floor(t/60) + ':' + String(t%60).padStart(2,'0');
+  S.blocks.forEach((b, i) => {
+    const el = document.createElement('div');
+    el.className = 'b' + (b.scene === 'WRIST' ? ' hero' : (i === S.blocks.length-1 ? ' payoff' : ''));
+    el.innerHTML = `<div class="mark"><span class="scene">${b.scene}</span><span>${mmss(b.t)}</span>${b.hold ? `<span>hold ${b.hold}s</span>` : ''}</div>
+      <p class="say">${b.say}</p>
+      ${b.do.length ? `<div class="do">${b.do.map(d=>`<span>${d}</span>`).join('')}</div>` : ''}
+      ${b.recover ? `<div class="rec">${b.recover}</div>` : ''}`;
+    out.appendChild(el);
+  });
+</script>

@@ -513,3 +513,51 @@ def alexa_sim_turn(body: TurnIn, request: Request) -> dict:
         raise HTTPException(401, "connect first")
     from alexa import sim
     return sim.turn(household, body.utterance)
+
+
+# ---- teleprompter (recording day) ------------------------------------------------------
+
+class PrompterIn(BaseModel):
+    household: str = Field(min_length=4, max_length=12)
+    cmd: str = Field(min_length=1, max_length=20)      # play pause reset next prev goto state
+    value: float | str | None = None
+    index: int | None = None
+    elapsed: float | None = None
+    running: bool | None = None
+
+
+@app.post("/prompter")
+def prompter_cmd(body: PrompterIn) -> dict:
+    """Relay between the phone remote and the prompter screen, over the events channel.
+
+    Recording day needs the prompter on one device and the control in a hand, and
+    the two are not on the same network stack; the household's own events channel
+    already delivers in under a second, so it carries this too.
+    """
+    _profile_or_404(body.household)
+    store.emit(body.household, "prompter", {
+        "cmd": body.cmd, "value": body.value, "index": body.index,
+        "elapsed": body.elapsed, "running": body.running,
+    })
+    return {"ok": True, "cmd": body.cmd}
+
+
+@app.get("/prompter", response_class=HTMLResponse)
+def prompter_page() -> str:
+    return (_WEB / "prompter.html").read_text(encoding="utf-8")
+
+
+@app.get("/prompter/remote", response_class=HTMLResponse)
+def prompter_remote() -> str:
+    return (_WEB / "remote.html").read_text(encoding="utf-8")
+
+
+@app.get("/prompter/script.js")
+def prompter_script():
+    from fastapi.responses import Response
+    return Response((_WEB / "script.js").read_text(encoding="utf-8"), media_type="application/javascript")
+
+
+@app.get("/script", response_class=HTMLResponse)
+def script_page() -> str:
+    return (_WEB / "read.html").read_text(encoding="utf-8")

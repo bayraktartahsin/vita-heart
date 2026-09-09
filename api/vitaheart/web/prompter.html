@@ -1,0 +1,186 @@
+<!doctype html>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vita Heart · prompter</title>
+<script src="/prompter/script.js"></script>
+<style>
+  :root{color-scheme:dark; --warm:#F5B14C; --calm:#79C98B; --heart:#FF6F61; --dim:#8A8F98}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#05070A;color:#F6F2EA;font:400 20px/1.4 -apple-system,system-ui,sans-serif;overflow:hidden;height:100vh}
+  #bar{position:fixed;inset:0 0 auto 0;height:74px;display:flex;align-items:center;gap:22px;padding:0 26px;
+       background:rgba(8,10,14,.92);border-bottom:1px solid rgba(255,255,255,.09);z-index:5}
+  #scene{font-weight:800;letter-spacing:3px;font-size:22px;background:#F6F2EA;color:#05070A;border-radius:10px;padding:7px 14px}
+  #clock{font-variant-numeric:tabular-nums;font-weight:700;font-size:34px;letter-spacing:-1px}
+  #pace{font-size:19px;font-weight:700;padding:7px 14px;border-radius:999px}
+  #bar .sp{margin-left:auto;display:flex;gap:10px;align-items:center;font-size:15px;color:var(--dim)}
+  #bar button{font:inherit;font-size:16px;font-weight:700;border:0;border-radius:10px;padding:9px 14px;background:#1B2129;color:#F6F2EA}
+  #bar button.on{background:var(--warm);color:#20160A}
+  #prog{position:fixed;top:74px;left:0;right:0;height:4px;background:rgba(255,255,255,.08);z-index:5}
+  #prog i{display:block;height:100%;width:0;background:var(--warm)}
+  main{position:absolute;inset:78px 0 0 0;overflow:hidden}
+  #reel{padding:32vh 6vw 60vh;transition:transform .5s cubic-bezier(.22,.61,.36,1)}
+  .blk{opacity:.16;transition:opacity .35s;margin:0 0 8vh;max-width:1500px}
+  .blk.on{opacity:1}
+  .blk.next{opacity:.4}
+  .say{font-size:64px;line-height:1.28;font-weight:600;letter-spacing:-.5px}
+  .blk.on .say{color:#fff}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:24px;font-weight:700;border-radius:12px;padding:8px 16px;background:rgba(121,201,139,.16);
+             color:var(--calm);border:1px solid rgba(121,201,139,.34)}
+  .meta span.hold{background:rgba(245,177,76,.16);color:var(--warm);border-color:rgba(245,177,76,.34)}
+  .rec{margin-top:14px;font-size:22px;color:#B9A275;background:rgba(245,177,76,.08);border:1px solid rgba(245,177,76,.2);
+       border-radius:12px;padding:12px 16px;max-width:1200px}
+  #heard{position:fixed;left:0;right:0;bottom:0;padding:10px 26px;font-size:16px;color:#4E5560;
+         background:rgba(5,7,10,.9);border-top:1px solid rgba(255,255,255,.07);z-index:5;white-space:nowrap;overflow:hidden}
+  #big{position:fixed;inset:0;display:none;align-items:center;justify-content:center;font-size:34vh;font-weight:800;
+       background:rgba(5,7,10,.96);z-index:9}
+  body.mirror #reel{transform-origin:center; }
+  body.mirror main{transform:scaleX(-1)}
+</style>
+
+<div id="bar">
+  <span id="scene">TV</span>
+  <span id="clock">0:00</span>
+  <span id="pace">on pace</span>
+  <span class="sp">
+    <button id="mic" title="follow my voice">🎙 voice</button>
+    <button id="mir" title="mirror for teleprompter glass">mirror</button>
+    <button id="sizeD">A−</button><button id="sizeU">A+</button>
+    <span id="conn">connecting…</span>
+  </span>
+</div>
+<div id="prog"><i></i></div>
+<main><div id="reel"></div></main>
+<div id="heard"></div>
+<div id="big"></div>
+
+<script>
+const S = window.VITA_SCRIPT, B = S.blocks;
+const $ = id => document.getElementById(id);
+const API = location.origin;
+const HH = new URLSearchParams(location.search).get('household') || 'AHMET1';
+const mmss = t => Math.floor(t/60) + ':' + String(Math.floor(t%60)).padStart(2,'0');
+
+let i = 0, running = false, t0 = 0, elapsed = 0, size = 64;
+
+const reel = $('reel');
+B.forEach((b, n) => {
+  const el = document.createElement('div');
+  el.className = 'blk'; el.id = 'b' + n;
+  el.innerHTML = `<div class="say">${b.say}</div>
+    <div class="meta">${b.do.map(d=>`<span>${d}</span>`).join('')}${b.hold?`<span class="hold">hold ${b.hold}s</span>`:''}</div>
+    ${b.recover?`<div class="rec">${b.recover}</div>`:''}`;
+  reel.appendChild(el);
+});
+
+function render(){
+  B.forEach((_, n) => {
+    const el = $('b'+n);
+    el.classList.toggle('on', n === i);
+    el.classList.toggle('next', n === i + 1);
+  });
+  $('scene').textContent = B[i].scene;
+  const el = $('b'+i);
+  const y = el.offsetTop - window.innerHeight * 0.32;
+  reel.style.transform = `translateY(${-y}px)`;
+  const behind = elapsed - B[i].t;
+  const p = $('pace');
+  if (!running) { p.textContent = 'ready'; p.style.background = '#1B2129'; p.style.color = '#8A8F98'; }
+  else if (behind > 8) { p.textContent = `${Math.round(behind)}s behind`; p.style.background = 'rgba(255,111,97,.2)'; p.style.color = '#FF6F61'; }
+  else if (behind > 3) { p.textContent = `${Math.round(behind)}s behind`; p.style.background = 'rgba(245,177,76,.2)'; p.style.color = '#F5B14C'; }
+  else { p.textContent = 'on pace'; p.style.background = 'rgba(121,201,139,.18)'; p.style.color = '#79C98B'; }
+  $('prog').firstElementChild.style.width = Math.min(100, (elapsed / S.target) * 100) + '%';
+}
+
+function tick(){
+  if (running) elapsed = (performance.now() - t0) / 1000;
+  $('clock').textContent = mmss(elapsed);
+  if (running) { const b = elapsed - B[i].t; $('pace').textContent = b > 3 ? `${Math.round(b)}s behind` : 'on pace'; }
+  $('prog').firstElementChild.style.width = Math.min(100, (elapsed / S.target) * 100) + '%';
+  requestAnimationFrame(tick);
+}
+
+function go(n, push = true){
+  i = Math.max(0, Math.min(B.length - 1, n));
+  render();
+  if (push) state();
+}
+function play(){ if (running) return; t0 = performance.now() - elapsed*1000; running = true; listen(); render(); state(); }
+function pause(){ running = false; render(); state(); }
+function reset(){ running = false; elapsed = 0; go(0, false); render(); state(); }
+function countIn(){
+  const big = $('big'); let n = 3; big.style.display = 'flex'; big.textContent = n;
+  const id = setInterval(() => { n--; if (n === 0){ clearInterval(id); big.style.display='none'; play(); } else big.textContent = n; }, 1000);
+}
+
+/* ---- voice follow ------------------------------------------------------------
+   The prompter listens for the tail of the line you are reading, so it moves when
+   you do, not on a timer you have to chase. A timer is the fallback, never the
+   master: if the microphone is off or mishears, the line simply stays put. */
+const norm = s => s.toLowerCase().replace(/[^a-z0-9çğıöşü ]/g, ' ').replace(/\s+/g, ' ').trim();
+let rec = null, micOn = false;
+function listen(){
+  const R = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!R || rec || !micOn) return;
+  rec = new R(); rec.continuous = true; rec.interimResults = true; rec.lang = 'en-US';
+  rec.onresult = e => {
+    let heard = '';
+    for (let k = e.resultIndex; k < e.results.length; k++) heard += e.results[k][0].transcript + ' ';
+    heard = norm(heard); if (!heard) return;
+    $('heard').textContent = '… ' + heard.slice(-110);
+    const cue = norm(B[i].cue).split(' ');
+    const tail = heard.split(' ').slice(-14);
+    const hit = cue.filter(w => tail.includes(w)).length / cue.length;
+    if (hit >= 0.7 && i < B.length - 1) { advanceSoon(); }
+  };
+  rec.onend = () => { rec = null; if (micOn && running) listen(); };
+  try { rec.start(); } catch (_) {}
+}
+let armed = false;
+function advanceSoon(){
+  if (armed) return; armed = true;
+  setTimeout(() => { armed = false; go(i + 1); }, B[i].hold ? B[i].hold * 1000 : 350);
+}
+
+/* ---- remote relay ------------------------------------------------------------ */
+let cursor;
+async function poll(){
+  for (;;) {
+    try {
+      const r = await fetch(`${API}/events?household=${HH}&since=${cursor ?? ''}&wait=20`);
+      const j = await r.json(); cursor = j.cursor; $('conn').textContent = 'remote linked';
+      for (const e of j.events) {
+        if (e.kind !== 'prompter') continue;
+        const d = e.data || {};
+        if (d.cmd === 'play') countIn();
+        else if (d.cmd === 'pause') pause();
+        else if (d.cmd === 'reset') reset();
+        else if (d.cmd === 'next') go(i + 1);
+        else if (d.cmd === 'prev') go(i - 1);
+        else if (d.cmd === 'goto' && d.index != null) go(d.index);
+        else if (d.cmd === 'size') { size = Math.max(34, Math.min(96, size + (d.value > 0 ? 4 : -4))); applySize(); }
+      }
+    } catch (_) { $('conn').textContent = 'remote offline'; await new Promise(r => setTimeout(r, 2000)); }
+  }
+}
+let lastState = 0;
+function state(){
+  const now = Date.now(); if (now - lastState < 400) return; lastState = now;
+  fetch(`${API}/prompter`, {method:'POST', headers:{'content-type':'application/json'},
+    body: JSON.stringify({household: HH, cmd: 'state', index: i, elapsed: Math.round(elapsed), running})}).catch(()=>{});
+}
+setInterval(() => { if (running) state(); }, 4000);
+
+/* ---- controls ---------------------------------------------------------------- */
+function applySize(){ document.querySelectorAll('.say').forEach(e => e.style.fontSize = size + 'px'); }
+$('mic').onclick = () => { micOn = !micOn; $('mic').classList.toggle('on', micOn); if (micOn) listen(); else if (rec) { rec.stop(); rec = null; } };
+$('mir').onclick = () => document.body.classList.toggle('mirror');
+$('sizeU').onclick = () => { size = Math.min(96, size + 4); applySize(); };
+$('sizeD').onclick = () => { size = Math.max(34, size - 4); applySize(); };
+addEventListener('keydown', e => {
+  if (e.code === 'Space') { e.preventDefault(); running ? pause() : countIn(); }
+  if (e.code === 'ArrowRight' || e.code === 'PageDown') { e.preventDefault(); go(i + 1); }
+  if (e.code === 'ArrowLeft' || e.code === 'PageUp') { e.preventDefault(); go(i - 1); }
+  if (e.key === 'r') reset();
+});
+applySize(); render(); tick(); poll();
+</script>

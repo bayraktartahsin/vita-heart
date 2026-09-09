@@ -25,3 +25,8 @@ The app opens on household AHMET1. Arrows + OK. "I'm up" → the family page sho
 
 ## 5. Tests
 `pytest -q tests` (37) and `cd tv && npm test` (15). Live tests: `VITAHEART_LIVE=1`.
+
+## 6. Recording day (not part of judging)
+`sh scripts/demo_day.sh` sets the demo state, launches the app, opens the pages and runs pre-flight.
+The teleprompter is at `/prompter` (follows your voice), its phone remote at `/prompter/remote`,
+and the plain script at `/script`. They talk to each other over the household's own events channel.

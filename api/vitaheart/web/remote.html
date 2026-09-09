@@ -1,0 +1,98 @@
+<!doctype html>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vita Heart · prompter remote</title>
+<script src="/prompter/script.js"></script>
+<style>
+  :root{color-scheme:dark;--warm:#F5B14C;--calm:#79C98B;--heart:#FF6F61;--dim:#8A8F98}
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{background:#05070A;color:#F6F2EA;font:400 17px/1.45 -apple-system,system-ui,sans-serif;
+       padding:env(safe-area-inset-top) 16px calc(16px + env(safe-area-inset-bottom));min-height:100vh;display:flex;flex-direction:column;gap:14px}
+  header{display:flex;align-items:center;gap:12px;padding-top:14px}
+  #scene{font-weight:800;letter-spacing:2px;font-size:15px;background:#F6F2EA;color:#05070A;border-radius:8px;padding:5px 10px}
+  #clock{font-variant-numeric:tabular-nums;font-weight:700;font-size:28px;margin-left:auto}
+  #pace{font-size:13px;font-weight:700;padding:5px 10px;border-radius:999px;background:#1B2129;color:var(--dim)}
+  .card{background:#0E131A;border:1px solid rgba(255,255,255,.09);border-radius:20px;padding:18px}
+  #say{font-size:26px;line-height:1.35;font-weight:600}
+  #do{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+  #do span{font-size:15px;font-weight:700;border-radius:10px;padding:6px 12px;background:rgba(121,201,139,.16);color:var(--calm);border:1px solid rgba(121,201,139,.34)}
+  #rec{margin-top:12px;font-size:15px;color:#B9A275}
+  #next{color:var(--dim);font-size:17px;line-height:1.35}
+  .pad{display:grid;grid-template-columns:1fr 1.3fr 1fr;gap:12px;margin-top:auto}
+  button{font:inherit;font-weight:800;border:0;border-radius:18px;padding:22px 10px;background:#1B2129;color:#F6F2EA;font-size:19px}
+  button:active{transform:scale(.97)}
+  button.go{background:var(--warm);color:#20160A;font-size:22px}
+  button.stop{background:var(--heart);color:#2A0D09}
+  .row{display:flex;gap:12px}
+  .row button{flex:1;padding:14px 10px;font-size:15px;background:#12171F;color:var(--dim)}
+  #bar{height:5px;border-radius:5px;background:rgba(255,255,255,.09);overflow:hidden}
+  #bar i{display:block;height:100%;width:0;background:var(--warm)}
+  #conn{font-size:12px;color:#4E5560;text-align:center}
+</style>
+<header>
+  <span id="scene">TV</span>
+  <span id="pace">ready</span>
+  <span id="clock">0:00</span>
+</header>
+<div id="bar"><i></i></div>
+<div class="card"><div id="say">…</div><div id="do"></div><div id="rec"></div></div>
+<div class="card"><div id="next"></div></div>
+<div class="pad">
+  <button id="prev">◀︎</button>
+  <button id="play" class="go">Start</button>
+  <button id="next-b">▶︎</button>
+</div>
+<div class="row">
+  <button id="reset">Reset</button><button id="smaller">A−</button><button id="bigger">A+</button>
+</div>
+<div id="conn">linking…</div>
+<script>
+const S = window.VITA_SCRIPT, B = S.blocks, $ = id => document.getElementById(id);
+const API = location.origin, HH = new URLSearchParams(location.search).get('household') || 'AHMET1';
+const mmss = t => Math.floor(t/60) + ':' + String(Math.floor(t%60)).padStart(2,'0');
+let i = 0, running = false, elapsed = 0;
+
+function draw(){
+  const b = B[i];
+  $('scene').textContent = b.scene;
+  $('say').textContent = b.say;
+  $('do').innerHTML = b.do.map(d => `<span>${d}</span>`).join('');
+  $('rec').textContent = b.recover || '';
+  $('next').textContent = B[i+1] ? 'Next · ' + B[i+1].say.slice(0, 90) + (B[i+1].say.length > 90 ? '…' : '') : 'Last line. Stop recording after two seconds of silence.';
+  $('clock').textContent = mmss(elapsed);
+  $('play').textContent = running ? 'Pause' : (elapsed ? 'Resume' : 'Start');
+  $('play').className = running ? 'stop' : 'go';
+  const behind = elapsed - b.t;
+  const p = $('pace');
+  if (!running) { p.textContent = 'ready'; p.style.background = '#1B2129'; p.style.color = '#8A8F98'; }
+  else if (behind > 8) { p.textContent = Math.round(behind) + 's behind'; p.style.background = 'rgba(255,111,97,.2)'; p.style.color = '#FF6F61'; }
+  else if (behind > 3) { p.textContent = Math.round(behind) + 's behind'; p.style.background = 'rgba(245,177,76,.2)'; p.style.color = '#F5B14C'; }
+  else { p.textContent = 'on pace'; p.style.background = 'rgba(121,201,139,.18)'; p.style.color = '#79C98B'; }
+  $('bar').firstElementChild.style.width = Math.min(100, (elapsed / S.target) * 100) + '%';
+}
+const send = (cmd, extra = {}) => fetch(`${API}/prompter`, {method:'POST', headers:{'content-type':'application/json'},
+  body: JSON.stringify({household: HH, cmd, ...extra})}).catch(()=>{});
+
+$('play').onclick = () => { running ? send('pause') : send('play'); running = !running; draw(); };
+$('prev').onclick = () => { i = Math.max(0, i-1); draw(); send('prev'); };
+$('next-b').onclick = () => { i = Math.min(B.length-1, i+1); draw(); send('next'); };
+$('reset').onclick = () => { i = 0; elapsed = 0; running = false; draw(); send('reset'); };
+$('bigger').onclick = () => send('size', {value: 1});
+$('smaller').onclick = () => send('size', {value: -1});
+
+let cursor;
+(async function poll(){
+  for(;;){
+    try{
+      const r = await fetch(`${API}/events?household=${HH}&since=${cursor ?? ''}&wait=20`);
+      const j = await r.json(); cursor = j.cursor; $('conn').textContent = 'linked to the prompter';
+      for (const e of j.events){
+        if (e.kind !== 'prompter') continue;
+        const d = e.data || {};
+        if (d.cmd === 'state'){ if (d.index != null) i = d.index; if (d.elapsed != null) elapsed = d.elapsed; if (d.running != null) running = d.running; draw(); }
+      }
+    }catch(_){ $('conn').textContent = 'prompter offline'; await new Promise(r=>setTimeout(r,2000)); }
+  }
+})();
+setInterval(() => { if (running){ elapsed += 1; draw(); } }, 1000);
+draw();
+</script>

@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from fastapi.testclient import TestClient
 
 
@@ -10,7 +12,10 @@ def client(ddb):
 def test_night_run_writes_a_summary_without_the_model(ddb, monkeypatch):
     from vitaheart import store
     c = client(ddb)
-    store.add_signal("AHMET1", "contact.open", "front door", None, ts="2026-09-05T00:10:00+00:00")
+    # 00:10 UTC today = 03:10 in Istanbul: inside quiet hours and inside the 24-hour window,
+    # whenever the suite happens to run. A fixed date silently ages out of the window.
+    at = datetime.now(timezone.utc).replace(hour=0, minute=10, second=0, microsecond=0)
+    store.add_signal("AHMET1", "contact.open", "front door", None, ts=at.isoformat())
     c.post("/checkin", json={"household": "AHMET1"})
     # No AgentCore, no model: the summary is the signals' own notes.
     import agents.client as ac
