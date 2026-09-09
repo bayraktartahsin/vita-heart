@@ -45,12 +45,12 @@ export function MorningBoard({board, error, live, onCheckin, onOpenMeds, onOpenF
           <Text style={styles.h2}>
             {open.length === 0
               ? board.dueDoses.length ? 'Everything taken' : 'Nothing due right now'
-              : open.length === 1 ? 'One tablet, with breakfast' : `${open.length} tablets, with breakfast`}
+              : open.length === 1 ? 'One tablet to take now' : `${open.length} tablets to take now`}
           </Text>
           <Text style={styles.p}>
             {open.length === 0
               ? 'Medication reminders appear here once the boxes are photographed.'
-              : 'Due now. The box was photographed from the family\'s phone.'}
+              : `Due now${next && next.food ? `, ${next.food}` : ''}. The box was photographed from the family's phone.`}
           </Text>
         </View>
 
@@ -60,7 +60,9 @@ export function MorningBoard({board, error, live, onCheckin, onOpenMeds, onOpenF
             <View style={styles.doseText}>
               <Text style={styles.doseName} numberOfLines={1}>{next.name || 'Unreadable box'}</Text>
               <Text style={styles.doseMeta}>{next.strength ? `${next.strength} · ` : ''}one tablet{next.food ? ` · ${next.food}` : ''}</Text>
-              {next.dueAt ? <Text style={styles.doseWhen}>{next.slot} · {next.dueAt.slice(11, 16)}</Text> : <Text style={styles.doseWhen}>time not set yet</Text>}
+              {next.dueAt
+                ? <Text style={styles.doseWhen}>{next.slot.charAt(0).toUpperCase() + next.slot.slice(1)} · {next.dueAt.slice(11, 16)}</Text>
+                : <Text style={styles.doseWhen}>time not set yet</Text>}
             </View>
             <Chip icon="clock" tone="warm">{next.dueAt ? next.dueAt.slice(11, 16) : '—'}</Chip>
           </View>

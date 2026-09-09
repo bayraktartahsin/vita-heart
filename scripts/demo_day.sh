@@ -28,13 +28,20 @@ echo "3/5  demo state (a tablet becomes due now)"
 "$PY" "$ROOT/scripts/demo_setup.py" --due-now
 
 echo "4/5  windows"
+# Sized and placed by AppleScript: OBS captures a window wherever it sits, even behind
+# another one, so they are stacked rather than tiled. Landscape, because a portrait window
+# on a 16:9 canvas is mostly black bars.
 # -n --args --new-window forces a separate Chrome window per page; tabs cannot be captured
 # individually by OBS, and the take switches between them.
 open -na "Google Chrome" --args --new-window "$API/family?household=AHMET1"
-sleep 2
+sleep 3
+osascript -e 'tell application "Google Chrome" to set bounds of front window to {60, 80, 1340, 880}' >/dev/null 2>&1 || true
 open -na "Google Chrome" --args --new-window "$API/alexa-sim"
-sleep 2
+sleep 3
+osascript -e 'tell application "Google Chrome" to set bounds of front window to {80, 100, 1360, 900}' >/dev/null 2>&1 || true
 open -na "Google Chrome" --args --new-window "$API/prompter?household=AHMET1"
+sleep 3
+osascript -e 'tell application "Google Chrome" to set bounds of front window to {100, 120, 1380, 920}' >/dev/null 2>&1 || true
 
 echo "5/5  pre-flight"
 "$PY" "$ROOT/scripts/preflight.py" || true

@@ -34,6 +34,7 @@ class Ledger:
     recalls: dict[str, list[dict[str, Any]]] = field(default_factory=dict) # by ingredient
     recall_errors: dict[str, str] = field(default_factory=dict)
     directions: dict[str, dict[str, Any]] = field(default_factory=dict)   # by printed name
+    respelled: dict[str, str] = field(default_factory=dict)                # read → brand as printed
 
 
 _ledger: Ledger | None = None
@@ -63,6 +64,12 @@ def identify_medicine(printed_name: str, strength: str = "") -> str:
         strength: the strength as printed, e.g. "100 mg" (optional).
     """
     led = ledger()
+    # A reader that splits a brand at a kerning gap ("CORA SPIN") would otherwise put a name on
+    # the television that no pharmacy prints. The joined spelling is the truthful one to show.
+    joined = names.canonical_brand(printed_name)
+    if joined:
+        led.respelled[printed_name] = joined
+        printed_name = joined
     inn = names.to_inn(printed_name)
     query = " ".join(x for x in ((inn or printed_name), strength) if x)
     try:

@@ -178,7 +178,7 @@ export const App = ({apiBaseUrl = API_BASE_URL, household: initialHousehold}: {a
   const shell = {
     pairing: {tab: 'board', title: 'Vita ', accent: 'Heart', subtitle: 'The health room on this television',
       help: <HelpKeys items={[['↑ ↓', 'letter'], ['← →', 'move'], ['OK', 'connect']]} />},
-    board: {tab: 'board', title: greetHead, accent: greetName, subtitle: new Date().toDateString(),
+    board: {tab: 'board', title: greetHead, accent: greetName, subtitle: new Date().toLocaleDateString('en-GB', {weekday: 'long', day: 'numeric', month: 'long'}),
       help: <HelpKeys items={[['OK', 'choose'], ['← → ↑ ↓', 'move']]} note="Night Watch writes to the family at 21:00" />},
     meds: {tab: 'meds', title: openDoses === 1 ? 'One to take, ' : `${openDoses || 'Nothing'} to take, `, accent: 'this morning',
       subtitle: 'Photographed from the family\'s phone, read by the agents',

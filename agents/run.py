@@ -90,12 +90,17 @@ def _read_boxes(readings, on_step, unreadable) -> dict[str, Any]:
 
     meds = []
     for r in readings:
-        ident = led.identities.get(r["name"])
+        read_as = r["name"]
+        shown = led.respelled.get(read_as, read_as)   # the brand as a pharmacy prints it
+        # The tools key their ledger by whatever name they were given; a respelt brand is
+        # therefore filed under the corrected spelling. Look under both.
+        ident = led.identities.get(read_as) or led.identities.get(shown)
         ings = [n.lower() for _, n in (ident or {}).get("ingredients", [])]
         recalls = [rec for ing in ings for rec in led.recalls.get(ing, [])]
-        meds.append({"id": uuid.uuid4().hex[:10], "printed": r, "name": r["name"], "strength": r.get("strength"), "form": r.get("form"),
+        meds.append({"id": uuid.uuid4().hex[:10], "printed": r, "name": shown, "strength": r.get("strength"), "form": r.get("form"),
                      "identity": ident, "status": "identified" if ident else "unconfirmed",
-                     "recalls": recalls[:5], "directions": led.directions.get(r["name"])})
+                     "recalls": recalls[:5],
+                     "directions": led.directions.get(read_as) or led.directions.get(shown)})
     for r in unreadable:
         meds.append({"id": uuid.uuid4().hex[:10], "printed": r, "name": None, "strength": None, "form": None,
                      "identity": None, "status": "unreadable", "recalls": [], "directions": None})

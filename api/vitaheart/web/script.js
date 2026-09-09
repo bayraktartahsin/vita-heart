@@ -14,7 +14,7 @@ window.VITA_SCRIPT = {
       do: [],
       recover: '' },
     { t: 12, scene: 'TV', hold: 0, actFirst: false,
-      say: 'Günaydın Ahmet. One tablet due, one line from his daughter, one button.',
+      say: 'The television greets him in his own language. One tablet due, one line from his daughter, one button.',
       cue: 'one button',
       do: ['Press OK on I\'m up'],
       recover: 'If the button is not focused, press ↓ then OK.' },

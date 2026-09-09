@@ -68,7 +68,8 @@ def main() -> None:
         from datetime import datetime, timedelta, timezone
         ist = datetime.now(timezone.utc) + timedelta(hours=3)
         morning = f"{ist.hour:02d}:{(ist.minute // 30) * 30:02d}"
-        times = {"morning": morning, "evening": "19:00"}
+        later = ist + timedelta(hours=3)
+        times = {"morning": morning, "evening": f"{later.hour:02d}:00"}
     else:
         times = {"morning": "08:00", "evening": "19:00"}
     step(f"clock {times}"); httpx.post(f"{API}/clock", json={"household": HH, "times": times}, timeout=30).raise_for_status()

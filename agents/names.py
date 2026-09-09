@@ -26,6 +26,24 @@ TO_INN: dict[str, str] = {
 }
 
 
+def canonical_brand(printed_name: str | None) -> str | None:
+    """The brand as the table spells it, when a reader split it at a kerning gap.
+
+    Vision models read "CORASPIN" off a packet as "CORA SPIN" often enough that the
+    television would otherwise show a name no pharmacy prints. Only a joined pair that is
+    itself a known brand is respelled, and only when neither half is a medicine on its own.
+    """
+    if not printed_name:
+        return None
+    words = re.sub(r"[^a-zçğıöşü ]", " ", printed_name.lower()).split()
+    if len(words) < 2:
+        return None
+    for a, b in zip(words, words[1:]):
+        if a + b in TO_INN and a not in TO_INN and b not in TO_INN:
+            return (a + b).upper() if printed_name.isupper() else (a + b).capitalize()
+    return None
+
+
 def to_inn(printed_name: str | None) -> str | None:
     """Map a printed name to an INN, or return None when it is not in the table."""
     if not printed_name:
