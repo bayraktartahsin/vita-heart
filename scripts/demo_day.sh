@@ -27,6 +27,12 @@ echo "2/5  the app"
 ( cd "$ROOT/tv" && npm run build:debug >/tmp/vitaheart-build.log 2>&1 ) || { echo "build failed, see /tmp/vitaheart-build.log"; exit 1; }
 vega run-app "$ROOT/tv/build/aarch64-debug/vitahearttv_aarch64.vpkg"
 
+echo "3/5  waking the agents"
+# A runtime that has just been deployed answers its first call slowly, and the first call
+# on recording day should not be the one that builds the demo.
+curl -s -m 120 -X POST "$API/session/coach" -H 'content-type: application/json' \
+  -d '{"household":"AHMET1","numbers":{"phase":"warm","lastBpm":70}}' >/dev/null 2>&1 || true
+
 echo "3/5  demo state (a tablet becomes due now)"
 "$PY" "$ROOT/scripts/demo_setup.py" --due-now
 
@@ -37,6 +43,12 @@ echo "4/5  windows"
 osascript <<APPLESCRIPT >/dev/null 2>&1 || true
 tell application "Google Chrome"
   activate
+  -- running this twice must not leave two windows with the same title: OBS would then
+  -- offer two identical entries and the wrong one is only discovered in the recording
+  repeat with w in (every window)
+    set t to title of active tab of w
+    if t contains "Vita Heart" or t contains "Alexa+" then close w
+  end repeat
   set fam to make new window
   set URL of active tab of fam to "$FAMILY"
   set bounds of fam to {40, 60, 1480, 940}
@@ -48,6 +60,11 @@ APPLESCRIPT
 osascript <<APPLESCRIPT >/dev/null 2>&1 || true
 tell application "Safari"
   activate
+  repeat with w in (every window)
+    try
+      if name of w contains "prompter" then close w
+    end try
+  end repeat
   make new document with properties {URL:"$PROMPTER"}
 end tell
 APPLESCRIPT

@@ -58,7 +58,7 @@ def main() -> None:
         up = httpx.post(f"{API}/meds/upload-url", json={"household": HH, "content_type": "image/png"}, timeout=30).json()
         httpx.put(up["url"], content=png, headers={"content-type": "image/png"}, timeout=60).raise_for_status()
         t = time.time()
-        r = httpx.post(f"{API}/meds/read", json={"household": HH, "key": up["key"]}, timeout=120).json()
+        r = httpx.post(f"{API}/meds/read", json={"household": HH, "key": up["key"]}, timeout=180).json()
         for m in r["meds"]:
             step(f"read {lines[0]} -> {m['status']} {m.get('name')} = {(m.get('identity') or {}).get('name')} ({len(m['recalls'])} recalls, slots {m['directions']['slots']}) in {time.time()-t:.1f}s on {r.get('ran_on')}")
     if due_now:
