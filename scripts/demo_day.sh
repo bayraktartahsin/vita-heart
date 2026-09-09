@@ -13,6 +13,9 @@ set -e
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PY="$ROOT/.venv/bin/python"
 API="https://rrjb1x8j2b.execute-api.eu-north-1.amazonaws.com"
+FAMILY="$API/family?household=AHMET1"
+ALEXA="$API/alexa-sim"
+PROMPTER="$API/prompter?household=AHMET1"
 export PATH="$HOME/vega/bin:$PATH"
 
 echo "1/5  television"
@@ -28,20 +31,24 @@ echo "3/5  demo state (a tablet becomes due now)"
 "$PY" "$ROOT/scripts/demo_setup.py" --due-now
 
 echo "4/5  windows"
-# Sized and placed by AppleScript: OBS captures a window wherever it sits, even behind
-# another one, so they are stacked rather than tiled. Landscape, because a portrait window
-# on a 16:9 canvas is mostly black bars.
-# -n --args --new-window forces a separate Chrome window per page; tabs cannot be captured
-# individually by OBS, and the take switches between them.
-open -na "Google Chrome" --args --new-window "$API/family?household=AHMET1"
-sleep 3
-osascript -e 'tell application "Google Chrome" to set bounds of front window to {60, 80, 1340, 880}' >/dev/null 2>&1 || true
-open -na "Google Chrome" --args --new-window "$API/alexa-sim"
-sleep 3
-osascript -e 'tell application "Google Chrome" to set bounds of front window to {80, 100, 1360, 900}' >/dev/null 2>&1 || true
-open -na "Google Chrome" --args --new-window "$API/prompter?household=AHMET1"
-sleep 3
-osascript -e 'tell application "Google Chrome" to set bounds of front window to {100, 120, 1380, 920}' >/dev/null 2>&1 || true
+# One Chrome window with two tabs, not two windows: OBS cannot tell two identical Chrome
+# windows apart, and a wrong capture is discovered only in the recording. The prompter goes
+# in Safari, a different application, so nothing can be confused for it.
+osascript <<APPLESCRIPT >/dev/null 2>&1 || true
+tell application "Google Chrome"
+  activate
+  set w to make new window
+  set URL of active tab of w to "$FAMILY"
+  tell w to make new tab with properties {URL:"$ALEXA"}
+  set bounds of w to {40, 60, 1480, 940}
+end tell
+APPLESCRIPT
+osascript <<APPLESCRIPT >/dev/null 2>&1 || true
+tell application "Safari"
+  activate
+  make new document with properties {URL:"$PROMPTER"}
+end tell
+APPLESCRIPT
 
 echo "5/5  pre-flight"
 "$PY" "$ROOT/scripts/preflight.py" || true
@@ -49,18 +56,17 @@ echo "5/5  pre-flight"
 cat <<'NOTE'
 
 ────────────────────────────────────────────────────────────────────────
-FIVE windows are open. Four are recorded, one is not.
+THREE things are recorded, one is not.
 
-  OBS scene   hotkey   window to capture
-  TV          F1       Vega Virtual Device
-  FAMILY      F2       Chrome · Vita Heart · Family
-  ALEXA       F3       Chrome · Vita Heart · Alexa
-  TERMINAL    F4       this Terminal window
+  OBS scene   hotkey   one source, filling the frame
+  TV          F1       window · vega-virtual-device
+  WEB         F2       window · Google Chrome   (⌘1 family · ⌘2 Alexa)
+  TERMINAL    F3       window · Terminal
 
-  NOT captured        Chrome · Vita Heart · prompter
-                      → drag it to your second screen, then Control-Command-F
+  NOT recorded         Safari · the prompter
+                       → second screen, then Control-Command-F
 
+One source per scene, and press Command-F on each so it fills the canvas.
 In the prompter: click "voice on", allow the microphone, press the space bar.
-It counts you in and then tells you when to speak, when to press, when to wait.
 ────────────────────────────────────────────────────────────────────────
 NOTE

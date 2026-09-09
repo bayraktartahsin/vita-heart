@@ -10,9 +10,10 @@
      narrow strip of content in a wide black frame. */
   @media (min-width: 900px) {
     main { max-width: 1180px; display: grid; grid-template-columns: 1.15fr .85fr;
-           grid-template-areas: 'head head' 'summary today' 'summary messages' 'trace messages';
+           grid-template-areas: 'head head' 'sub sub' 'summary today' 'summary messages' 'trace messages';
            gap: 0 22px; align-content: start; padding: 28px 32px 40px; }
-    h1, .muted#sub { grid-area: head; }
+    h1 { grid-area: head; }
+    #sub { grid-area: sub; margin-bottom: 14px; }
     section:nth-of-type(1) { grid-area: summary; }
     section:nth-of-type(2) { grid-area: today; }
     section:nth-of-type(3) { grid-area: messages; }
@@ -53,7 +54,7 @@
     const b = await (await fetch(api + '/board?household=' + household)).json();
     $('title').textContent = 'Vita Heart · ' + b.person.name; $('sub').textContent = 'Household ' + household + ' · you are ' + author;
     const due = b.dueDoses || [];
-    $('today').innerHTML = `<div><span class="dot" style="background:${b.checkedInToday ? '#7fb77e' : '#b8b3a8'}"></span>${b.checkedInToday ? 'Said "I\\'m up" this morning.' : 'Has not pressed "I\\'m up" yet.'}</div>` +
+    $('today').innerHTML = `<div><span class="dot" style="background:${b.checkedInToday ? '#7fb77e' : '#b8b3a8'}"></span>${b.checkedInToday ? 'Said “I’m up” this morning.' : 'Has not pressed “I’m up” yet.'}</div>` +
       (due.length ? `<div style="margin-top:6px">${due.filter(d => d.confirmed).length} of ${due.length} doses confirmed${due.some(d => d.unscheduled) ? ' · times not set yet' : ''}.</div>` : '<div style="margin-top:6px">No medicines added yet.</div>');
     const s = await (await fetch(api + '/family/summary?household=' + household)).json();
     if (s.summary) { $('summary').textContent = s.summary.text; $('signals').textContent = (s.summary.signals || []).map(x => x.note).join(' '); }
