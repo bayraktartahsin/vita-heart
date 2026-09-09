@@ -54,6 +54,7 @@
 <div id="next">
   <b id="nextText">Press Start, or the space bar, when OBS is recording.</b>
   <span class="btn">
+    <button id="watch">Watch: not here</button>
     <button id="voice">voice off</button>
     <button id="mirror">mirror</button>
     <button id="startBtn" class="on">Start</button>
@@ -83,6 +84,7 @@ B.forEach((b, i) => {
 PHASES.push({k:'end', b: B[B.length-1], i: B.length-1, secs: 2});
 
 let p = 0, running = false, t0 = 0, elapsed = 0, phaseStart = 0, micOn = false, rec = null;
+let watchReady = localStorage.getItem('watchReady') === '1';
 
 const MODE = {
   do:   {label:'PRESS',  bg:'rgba(127,193,255,.18)', fg:'#7FC1FF'},
@@ -108,7 +110,8 @@ function draw(){
   const st = $('stage');
   st.style.color = m.fg;
   if (ph.k === 'say') {
-    st.innerHTML = `<div class="say" style="color:#fff">${ph.b.say}</div>` +
+    const line = (!watchReady && ph.b.sayRecorded) ? ph.b.sayRecorded : ph.b.say;
+    st.innerHTML = `<div class="say" style="color:#fff">${line}</div>` +
       (ph.b.recover ? `<div class="rec">If it misbehaves: ${ph.b.recover}</div>` : '') +
       `<div class="hint">${micOn ? 'it moves on when you finish the sentence' : 'space, or the arrow, when you finish'}</div>`;
   } else if (ph.k === 'do') {
@@ -134,7 +137,21 @@ function draw(){
   $('left').style.color = over > 0 ? '#FF6F61' : '';
 }
 
-function advance(){ if (p < PHASES.length - 1) { p++; phaseStart = elapsed; draw(); state(); } }
+function advance(){
+  if (p >= PHASES.length - 1) { return; }
+  p++; phaseStart = elapsed;
+  const ph = PHASES[p];
+  // the television performs the step itself: no click reaches the simulator from a script,
+  // and a take must not depend on a hand finding a key while a sentence is being read
+  if (ph.k === 'do' && ph.b.drive) { drive(ph.b.drive); }
+  draw(); state();
+}
+
+function drive(step){
+  const source = watchReady ? 'watch' : 'recorded';
+  fetch(`${API}/demo`, {method:'POST', headers:{'content-type':'application/json'},
+    body: JSON.stringify({household: HH, step, source})}).catch(()=>{});
+}
 
 function loop(){
   // setInterval, not requestAnimationFrame: a browser stops animation frames the moment the
@@ -217,6 +234,15 @@ $('voice').onclick = () => {
   draw();
 };
 $('mirror').onclick = () => document.body.classList.toggle('mirror');
+$('watch').onclick = () => {
+  watchReady = !watchReady;
+  localStorage.setItem('watchReady', watchReady ? '1' : '0');
+  $('watch').textContent = watchReady ? 'Watch: on the wrist' : 'Watch: not here';
+  $('watch').classList.toggle('on', watchReady);
+  draw();
+};
+$('watch').textContent = watchReady ? 'Watch: on the wrist' : 'Watch: not here';
+$('watch').classList.toggle('on', watchReady);
 addEventListener('keydown', e => {
   if (e.code === 'Space') { e.preventDefault(); running ? advance() : begin(); }
   if (e.code === 'ArrowRight') { e.preventDefault(); advance(); }

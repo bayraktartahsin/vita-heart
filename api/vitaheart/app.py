@@ -536,6 +536,26 @@ def alexa_sim_turn(body: TurnIn, request: Request) -> dict:
 
 # ---- teleprompter (recording day) ------------------------------------------------------
 
+class DemoIn(BaseModel):
+    household: str = Field(min_length=4, max_length=12)
+    step: str = Field(min_length=2, max_length=24)
+    source: str | None = Field(default=None, pattern="^(watch|recorded|synthetic)$")
+
+
+@app.post("/demo")
+def demo_step(body: DemoIn) -> dict:
+    """Drive the television from the prompter.
+
+    The simulator takes no clicks from a script, and a demo that depends on a human
+    hitting the right key at the right second is a demo that fails on camera. Each step
+    is the same action the remote would perform, delivered on the household's own events
+    channel, so what the judges see is the product working, not a recording of it.
+    """
+    _profile_or_404(body.household)
+    store.emit(body.household, "demo", {"step": body.step, "source": body.source})
+    return {"ok": True, "step": body.step}
+
+
 class PrompterIn(BaseModel):
     household: str = Field(min_length=4, max_length=12)
     cmd: str = Field(min_length=1, max_length=20)      # play pause reset next prev goto state

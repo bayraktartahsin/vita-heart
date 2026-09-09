@@ -59,12 +59,31 @@
   }
   $('typed').addEventListener('submit', e => { e.preventDefault(); const t = $('text').value.trim(); if (t) { $('text').value = ''; turn(t); } });
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let arm = () => {};
   if (SR) {
     const rec = new SR(); rec.lang = 'en-US'; rec.interimResults = false;
     rec.onresult = e => turn(e.results[0][0].transcript);
     rec.onend = () => $('mic').classList.remove('listening');
-    $('mic').addEventListener('click', () => { $('mic').classList.add('listening'); rec.start(); });
+    arm = () => { try { $('mic').classList.add('listening'); rec.start(); } catch (_) {} };
+    $('mic').addEventListener('click', arm);
   } else { $('mic').disabled = true; $('mic').title = 'Speech recognition is not available in this browser; type instead.'; }
+
+  /* During a recording the prompter arms this microphone on cue, so nobody has to find a
+     button while reading a line. The words spoken are still the words that reach the MCP
+     server: nothing is scripted on this side. */
+  (async function drive(){
+    const hh = new URLSearchParams(location.search).get('household') || 'AHMET1';
+    let cursor;
+    for (;;) {
+      try {
+        const r = await fetch(`${location.origin}/events?household=${hh}&since=${cursor ?? ''}&wait=20`);
+        const j = await r.json(); cursor = j.cursor;
+        for (const e of j.events) {
+          if (e.kind === 'demo' && (e.data || {}).step === 'listen') { arm(); }
+        }
+      } catch (_) { await new Promise(r => setTimeout(r, 2000)); }
+    }
+  })();
   const code = new URLSearchParams(location.search).get('code');
   (async () => { if (code) await pkceFinish(code); $('auth').textContent = token() ? 'connected to household via OAuth 2.1 PKCE' : 'not connected · first message opens the consent page'; })();
 </script>

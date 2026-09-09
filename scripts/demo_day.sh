@@ -52,7 +52,12 @@ tell application "Safari"
 end tell
 APPLESCRIPT
 
-echo "5/5  pre-flight"
+echo "5/5  heart-rate feed and pre-flight"
+# Without a Watch on the wrist, the session still has to show real numbers moving. This
+# feeds a recorded trace into any session the television opens, and the screen says
+# "a recorded session" underneath for the whole time it plays.
+pkill -f replay_daemon.py >/dev/null 2>&1 || true
+("$PY" "$ROOT/scripts/replay_daemon.py" >/tmp/vitaheart-replay.log 2>&1 &)
 "$PY" "$ROOT/scripts/preflight.py" || true
 
 cat <<'NOTE'

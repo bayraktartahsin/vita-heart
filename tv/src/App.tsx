@@ -78,8 +78,18 @@ export const App = ({apiBaseUrl = API_BASE_URL, household: initialHousehold}: {a
     if (e.kind === 'hr' && sessionRef.current && e.data.session === sessionRef.current.id) {
       setLatestBpm(Number(e.data.bpm));
     }
+    if (e.kind === 'demo') {
+      demo(String(e.data.step ?? ''), e.data.source as SessionSource | undefined);
+    }
   }, [refresh]);
   const live = useLiveEvents(api, onEvent);
+
+  /**
+   * The television, driven from the prompter during a recording. Every step is the same
+   * call the on-screen button makes; nothing here is a special path that only works in a demo.
+   */
+  const demoRef = useRef<(step: string, source?: SessionSource) => void>(() => {});
+  const demo = useCallback((step: string, source?: SessionSource) => demoRef.current(step, source), []);
 
   const checkin = useCallback(async () => {
     if (!api) {
@@ -169,6 +179,24 @@ export const App = ({apiBaseUrl = API_BASE_URL, household: initialHousehold}: {a
     setScreen('board');
     refresh();
   }, [api, refresh]);
+
+  demoRef.current = (step: string, source?: SessionSource) => {
+    switch (step) {
+      case 'board': setScreen('board'); break;
+      case 'checkin': if (!board?.checkedInToday) { checkin(); } break;
+      case 'meds': setScreen('meds'); break;
+      case 'confirm': {
+        const open = (board?.dueDoses ?? []).find(d => !d.confirmed);
+        if (open) { confirmDose(open); }
+        break;
+      }
+      case 'clock': setScreen('clock'); break;
+      case 'session': startSession(source ?? 'watch'); break;
+      case 'stop': stopSession(); break;
+      case 'family': setScreen('family'); break;
+      default: break;
+    }
+  };
 
   const slotsNeeded = Array.from(new Set((board?.dueDoses ?? []).map(d => d.slot))) as Slot[];
   const openDoses = (board?.dueDoses ?? []).filter(d => !d.confirmed).length;
