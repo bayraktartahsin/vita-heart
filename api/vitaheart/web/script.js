@@ -32,7 +32,7 @@ window.VITA_SCRIPT = {
       say: 'The television never says recalled. It gives him the question to ask the pharmacist.',
       cue: 'ask the pharmacist',
       do: ['Press OK on I took it'],
-      recover: 'If no dose is due, say: the dose window is later today, here is this morning\\u2019s list.' },
+      recover: 'If no dose is due, say: the dose window is later today, here is this morning\\'s list.' },
     { t: 49, scene: 'ALEXA', hold: 3, actFirst: true,
       say: 'How is Dad doing today?',
       cue: 'how is dad doing today',
