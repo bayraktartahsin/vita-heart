@@ -16,8 +16,6 @@ type Props = {
   onStartSession: (source: 'watch' | 'recorded' | 'synthetic') => void; checkinPending: boolean;
 };
 
-const SLOTS = ['morning', 'midday', 'evening', 'night'];
-
 /**
  * The first thing the television shows. Four things only: what is due, how his
  * heart was overnight, one line from the family, and one obvious button.
@@ -38,7 +36,6 @@ export function MorningBoard({board, error, live, onCheckin, onOpenMeds, onOpenF
   const open = board.dueDoses.filter(d => !d.confirmed);
   const next = open[0];
   const recalls = open.reduce((n, d) => n + (d.recallCount || 0), 0);
-  const activeSlot = next ? next.slot : 'morning';
 
   return (
     <View style={styles.grid} testID="morning-board">
@@ -59,7 +56,7 @@ export function MorningBoard({board, error, live, onCheckin, onOpenMeds, onOpenF
 
         {next ? (
           <View style={styles.dose}>
-            <BoxThumb name={next.name || 'Unreadable'} strength={next.strength} />
+            <BoxThumb name={next.name || 'Unreadable'} strength={next.strength} width={s(158)} height={s(112)} />
             <View style={styles.doseText}>
               <Text style={styles.doseName} numberOfLines={1}>{next.name || 'Unreadable box'}</Text>
               <Text style={styles.doseMeta}>{next.strength ? `${next.strength} · ` : ''}one tablet{next.food ? ` · ${next.food}` : ''}</Text>
@@ -72,16 +69,9 @@ export function MorningBoard({board, error, live, onCheckin, onOpenMeds, onOpenF
         {recalls > 0 ? (
           <View style={styles.safety}>
             <Icon name="shield" size={s(30)} tint={color.warm} />
-            <Text style={styles.safetyText}>A batch of this ingredient was recalled. Ask the pharmacist whether your box is affected. Do not stop taking it on your own.</Text>
+            <Text style={styles.safetyText}>A batch of this ingredient was recalled. Ask the pharmacist whether your box is affected.</Text>
           </View>
         ) : null}
-
-        <View>
-          <View style={styles.band}>
-            {SLOTS.map(s => <View key={s} style={[styles.bandSeg, s === activeSlot ? styles.bandNow : null]} />)}
-          </View>
-          <Text style={styles.bandLabel}>Morning · midday · evening · night</Text>
-        </View>
 
         <View style={styles.actions}>
           {board.checkedInToday ? (
@@ -127,12 +117,12 @@ export function MorningBoard({board, error, live, onCheckin, onOpenMeds, onOpenF
 
 const styles = StyleSheet.create({
   grid: {flex: 1, flexDirection: 'row', gap: s(26)},
-  hero: {flex: 1.18, gap: s(22)},
+  hero: {flex: 1.18, gap: s(18), paddingVertical: s(30), paddingHorizontal: s(34)},
   side: {flex: 0.82, gap: s(26)},
   centre: {flex: 1, justifyContent: 'center', gap: s(20)},
   h2: {fontFamily: 'serif', fontSize: type.h2, lineHeight: s(56), color: color.text, marginTop: s(14), letterSpacing: s(-0.5)},
   p: {fontSize: type.body, lineHeight: s(41), color: color.dim, marginTop: s(10)},
-  dose: {flexDirection: 'row', alignItems: 'center', gap: s(30), padding: s(24), borderRadius: s(30),
+  dose: {flexDirection: 'row', alignItems: 'center', gap: s(24), padding: s(20), borderRadius: s(28),
     backgroundColor: 'rgba(0,0,0,0.32)', borderWidth: 1, borderColor: color.hair},
   doseText: {flex: 1},
   doseName: {fontSize: s(38), fontWeight: '600', color: color.text, letterSpacing: s(-0.3)},
@@ -141,11 +131,7 @@ const styles = StyleSheet.create({
   safety: {flexDirection: 'row', gap: s(16), alignItems: 'flex-start', paddingVertical: s(20), paddingHorizontal: s(24),
     borderRadius: s(22), backgroundColor: color.warmSoft, borderWidth: 1, borderColor: color.warmEdge},
   safetyText: {flex: 1, fontSize: type.small, lineHeight: s(33), color: color.warmText},
-  band: {flexDirection: 'row', gap: s(12)},
-  bandSeg: {flex: 1, height: s(10), borderRadius: s(6), backgroundColor: color.panel2},
-  bandNow: {backgroundColor: color.warm},
-  bandLabel: {fontSize: s(23), color: color.dim, marginTop: s(12)},
-  actions: {flexDirection: 'row', gap: s(22), marginTop: 'auto', alignItems: 'center'},
+  actions: {flexDirection: 'row', gap: s(18), marginTop: 'auto', alignItems: 'center', flexWrap: 'wrap'},
   hrRow: {flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between'},
   hr: {fontFamily: 'serif', fontSize: type.display, lineHeight: s(132), color: color.heart, letterSpacing: s(-5)},
   hrUnit: {fontSize: type.small, lineHeight: s(33), color: color.dim, textAlign: 'right'},

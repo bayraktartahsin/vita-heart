@@ -20,7 +20,10 @@ DEMO_PROFILE = {
 def main() -> None:
     store.put_profile(config.DEMO_HOUSEHOLD, DEMO_PROFILE)
     if not store.latest_message(config.DEMO_HOUSEHOLD):
-        store.post_message(config.DEMO_HOUSEHOLD, "Selin", "Baba, akşam arayacağım. İlaçlarını unutma.")
+        # The greeting follows the household's language; the family's own words are shown as
+        # written. English here so the judges can read the demo without a translation.
+        store.post_message(config.DEMO_HOUSEHOLD, "Selin",
+                           "Baba, I will call you this evening. Don't forget your tablets.")
     print(f"seeded household {config.DEMO_HOUSEHOLD} in table {config.TABLE} ({config.REGION})")
 
 

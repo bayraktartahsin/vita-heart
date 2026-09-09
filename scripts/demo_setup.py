@@ -44,8 +44,14 @@ def step(msg): print(f"• {msg}", flush=True)
 
 def main() -> None:
     due_now = "--due-now" in sys.argv
+    english = "--english" in sys.argv
     py = sys.executable
     step("reset"); subprocess.run([py, str(ROOT / "scripts/reset_demo.py")], check=True, capture_output=True)
+    if english:
+        # The greeting is the household's language. --english makes the whole board English,
+        # for an audience that does not read Turkish.
+        httpx.post(f"{API}/profile", json={"household": HH, "lang": "en"}, timeout=30)
+        step("household language set to English")
     for lines in (["CORASPIN 100 mg", "30 enterik tablet", "Günde 1 kez, sabah", "LOT 25A007"],
                   ["GLIFOR 850 mg", "60 film tablet", "Sabah ve akşam, yemekten sonra", "LOT 24H331"]):
         png = label_png(lines)

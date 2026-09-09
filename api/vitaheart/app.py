@@ -258,6 +258,25 @@ def session_live(household: str = Query(..., min_length=4, max_length=12)) -> di
     return {"live": live}
 
 
+class ProfileIn(BaseModel):
+    household: str = Field(min_length=4, max_length=12)
+    lang: str | None = Field(default=None, pattern="^(tr|en)$")
+    name: str | None = None
+
+
+@app.post("/profile")
+def set_profile(body: ProfileIn) -> dict:
+    """Change the household's own settings: the language its television greets it in, and the name."""
+    p = dict(_profile_or_404(body.household))
+    if body.lang:
+        p["lang"] = body.lang
+    if body.name:
+        p["name"] = body.name
+    store.put_profile(body.household, {k: v for k, v in p.items() if k not in ("PK", "SK", "updated")})
+    store.emit(body.household, "board", {"lang": p.get("lang")})
+    return {"lang": p.get("lang"), "name": p.get("name")}
+
+
 class CoachIn(BaseModel):
     household: str = Field(min_length=4, max_length=12)
     numbers: dict
