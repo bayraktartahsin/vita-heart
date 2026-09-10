@@ -62,7 +62,11 @@ final class HeartRateStreamer: NSObject, ObservableObject {
     private func follow() {
         waiter?.cancel()
         waiter = Task { [weak self] in
+            var beat = 0
             while !Task.isCancelled {
+                // every third pass, so the prompter knows within fifteen seconds
+                if beat % 3 == 0 { await self?.client.announceWrist() }
+                beat += 1
                 let live = try? await self?.client.liveSession()
                 await MainActor.run {
                     guard let self else { return }
@@ -79,7 +83,7 @@ final class HeartRateStreamer: NSObject, ObservableObject {
                     } else {
                         if self.tvSession != nil { self.tvSession = nil }
                         self.status = live == nil
-                            ? "Waiting for the television…"
+                            ? "Reading your wrist. Waiting for the television."
                             : "The television is playing a recorded session"
                     }
                 }

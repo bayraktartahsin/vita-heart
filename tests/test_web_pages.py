@@ -55,3 +55,15 @@ def test_the_alexa_transcript_is_wiped_when_a_take_starts():
     page = (Path(__file__).resolve().parent.parent / "api" / "vitaheart" / "web"
             / "alexa-sim.html").read_text(encoding="utf-8")
     assert "d.step === 'record'" in page and "$('log').innerHTML = ''" in page
+
+
+def test_the_prompter_learns_the_watch_is_on_a_wrist_by_itself():
+    """Remembering a toggle is not a plan.
+
+    Forgotten, the television opens a "recorded" session, the replay trace is fed into
+    it, and the screen says "a recorded session" while a real Watch sits on a real wrist
+    doing nothing.
+    """
+    page = (Path(__file__).resolve().parent.parent / "api" / "vitaheart" / "web"
+            / "prompter.html").read_text(encoding="utf-8")
+    assert "c === 'wrist'" in page and "function wristLight" in page

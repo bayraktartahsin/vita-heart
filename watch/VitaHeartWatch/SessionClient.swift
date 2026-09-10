@@ -23,4 +23,18 @@ final class SessionClient {
         req.httpBody = try? JSONSerialization.data(withJSONObject: body)
         _ = try? await session.data(for: req)   // a lost sample is a lost sample; the next one is 5 s away
     }
+
+    /// Tell the prompter the wrist is here, so nobody has to remember a toggle.
+    ///
+    /// Forgetting it means the television opens a "recorded" session, the replay trace is
+    /// fed into it, and the screen says "a recorded session" while a real Watch sits on a
+    /// real wrist doing nothing. That is a worse demo than either honest option.
+    func announceWrist() async {
+        var req = URLRequest(url: Config.apiBase.appendingPathComponent("prompter"))
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "content-type")
+        req.httpBody = try? JSONSerialization.data(
+            withJSONObject: ["household": Config.household, "cmd": "wrist"])
+        _ = try? await session.data(for: req)
+    }
 }

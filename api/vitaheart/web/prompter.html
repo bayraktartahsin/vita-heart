@@ -282,7 +282,7 @@ function state(){
     body: JSON.stringify({household: HH, cmd: 'state', index: PHASES[p].i, elapsed: Math.round(elapsed), running})}).catch(()=>{});
 }
 // ---- is the television listening? ----------------------------------------------
-let tvSeen = 0, alexaSpoke = -1;
+let tvSeen = 0, alexaSpoke = -1, wristSeen = 0;
 function tvLight(){
   const el = $('tv'), age = (Date.now() - tvSeen) / 1000;
   const ok = tvSeen && age < 46;                 // it beats every 20 s
@@ -290,7 +290,19 @@ function tvLight(){
   el.classList.toggle('ok', !!ok);
   el.classList.toggle('bad', !ok);
 }
+function wristLight(){
+  // the Watch announces itself every 15 s while armed
+  const armed = wristSeen && (Date.now() - wristSeen) / 1000 < 40;
+  if (armed !== watchReady) {
+    watchReady = armed;
+    localStorage.setItem('watchReady', armed ? '1' : '0');
+    draw();
+  }
+  $('watch').textContent = armed ? 'Watch: on the wrist' : 'Watch: not here';
+  $('watch').classList.toggle('on', !!armed);
+}
 setInterval(tvLight, 1000);
+setInterval(wristLight, 2000);
 
 (async function poll(){
   for(;;){
@@ -304,6 +316,10 @@ setInterval(tvLight, 1000);
         // so a beat proves the steps will land — not that the app is merely on screen.
         if (c === 'alive' || c === 'device') { tvSeen = Date.now(); tvLight(); continue; }
         if (c === 'spoke') { alexaSpoke = elapsed; continue; }
+        // The Watch says when it is on a wrist and armed, so the toggle is not something
+        // to remember. Forgetting it meant a real Watch sitting idle while the television
+        // played a recorded trace and said so on screen.
+        if (c === 'wrist') { wristSeen = Date.now(); wristLight(); continue; }
         if (c === 'play' && !running) begin();
         else if (c === 'pause') pause();
         else if (c === 'reset') reset();
