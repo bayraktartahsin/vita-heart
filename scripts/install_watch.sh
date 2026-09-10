@@ -42,8 +42,11 @@ fi
 [ -n "$UDID" ] || { echo "No paired Apple Watch found. Unlock it, keep the iPhone nearby, and try again."; exit 1; }
 echo "watch: $UDID"
 
+# watchOS reports "Enabled (1)", not "Enabled": match the word, not the whole line.
 MODE=$(xcrun devicectl device info details --device "$UDID" 2>/dev/null | sed -n 's/.*Developer Mode Status: *//p' | head -1)
-if [ "$MODE" != "Enabled" ]; then
+case "$MODE" in
+  Enabled*) ;;
+  *)
   cat <<'STOP'
 Developer Mode is off on the Watch, so nothing can be installed on it.
 
@@ -57,8 +60,8 @@ Developer Mode is off on the Watch, so nothing can be installed on it.
 Then run this script again. Nothing else about the demo depends on it — without the
 Watch the session plays a recorded trace and says so on screen.
 STOP
-  exit 2
-fi
+  exit 2 ;;
+esac
 
 xcodegen generate -q
 xcodebuild -project VitaHeartWatch.xcodeproj -scheme VitaHeartWatch -destination 'generic/platform=watchOS' \

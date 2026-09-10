@@ -58,15 +58,17 @@ export const App = ({apiBaseUrl = API_BASE_URL, household: initialHousehold}: {a
 
   // What the television actually gives us, reported once. A ten-foot layout that assumes
   // 1920x1080 and lands on a smaller logical surface is unreadable, and there is no console.
-  useEffect(() => {
+  const report = useCallback((cmd: string) => {
     const w = Dimensions.get('window');
     const scr = Dimensions.get('screen');
     fetch(`${apiBaseUrl}/prompter`, {
       method: 'POST', headers: {'content-type': 'application/json'},
-      body: JSON.stringify({household: household ?? DEFAULT_HOUSEHOLD, cmd: 'device',
+      body: JSON.stringify({household: household ?? DEFAULT_HOUSEHOLD, cmd,
         value: `window ${w.width}x${w.height} screen ${scr.width}x${scr.height} ratio ${PixelRatio.get()} font ${PixelRatio.getFontScale()}`}),
     }).catch(() => {});
   }, [apiBaseUrl, household]);
+
+  useEffect(() => { report('device'); }, [report]);
 
   const onEvent = useCallback((e: LiveEvent) => {
     if (['message', 'checkin', 'dose', 'board', 'med'].includes(e.kind)) {
@@ -194,6 +196,10 @@ export const App = ({apiBaseUrl = API_BASE_URL, household: initialHousehold}: {a
       case 'session': startSession(source ?? 'watch'); break;
       case 'stop': stopSession(); break;
       case 'family': setScreen('family'); break;
+      // Answer so pre-flight can tell a television that is listening from one that is
+      // merely installed. An app that has quietly exited looks identical from outside,
+      // and the first thing that reveals it is a demo step doing nothing on camera.
+      case 'ping': report('alive'); break;
       default: break;
     }
   };

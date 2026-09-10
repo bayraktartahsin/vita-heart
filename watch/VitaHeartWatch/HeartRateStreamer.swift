@@ -16,6 +16,7 @@ final class HeartRateStreamer: NSObject, ObservableObject {
     private var session: HKWorkoutSession?
     private var builder: HKLiveWorkoutBuilder?
     private var tvSession: String?
+    private var waiter: Task<Void, Never>?
     private let client = SessionClient()
 
     func requestAccess() async -> Bool {
@@ -30,11 +31,13 @@ final class HeartRateStreamer: NSObject, ObservableObject {
         }
     }
 
+    /// Tap Start once, before anything else. The sensor begins sampling immediately, so
+    /// the wrist is already reading by the time the television opens a session; samples
+    /// are only sent once one exists. The alternative — demanding a live session at the
+    /// instant of the tap — means tapping the watch mid-sentence while reading a script,
+    /// which is not something anyone can do on camera.
     func start() async {
         guard await requestAccess() else { return }
-        status = "Asking the television…"
-        guard let live = try? await client.liveSession() else { status = "The television has not started a session"; return }
-        tvSession = live.id
         let config = HKWorkoutConfiguration()
         config.activityType = .mixedCardio
         config.locationType = .indoor
@@ -47,13 +50,39 @@ final class HeartRateStreamer: NSObject, ObservableObject {
             session = s; builder = b
             s.startActivity(with: Date())
             try await b.beginCollection(at: Date())
-            status = "Streaming to the television"
         } catch {
             status = "Could not start: \(error.localizedDescription)"
+            return
+        }
+        status = "Waiting for the television…"
+        follow()
+    }
+
+    /// Follow the television: pick the session up when it opens, let go when it closes.
+    private func follow() {
+        waiter?.cancel()
+        waiter = Task { [weak self] in
+            while !Task.isCancelled {
+                let live = try? await self?.client.liveSession()
+                await MainActor.run {
+                    guard let self else { return }
+                    if let live {
+                        if self.tvSession != live.id {
+                            self.tvSession = live.id
+                            self.status = "Streaming to the television"
+                        }
+                    } else if self.tvSession != nil {
+                        self.tvSession = nil
+                        self.status = "Waiting for the television…"
+                    }
+                }
+                try? await Task.sleep(nanoseconds: 3_000_000_000)
+            }
         }
     }
 
     func stop() async {
+        waiter?.cancel(); waiter = nil
         session?.end()
         try? await builder?.endCollection(at: Date())
         _ = try? await builder?.finishWorkout()

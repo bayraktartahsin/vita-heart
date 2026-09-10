@@ -61,6 +61,19 @@ def main() -> None:
         check("Vita Heart installed on the device", "com.gravitilabs.vitaheart.main" in apps, "" if "com.gravitilabs.vitaheart.main" in apps else (apps.strip()[:80] or "no output"))
     else:
         check("vega CLI present", False, "source ~/vega/env")
+
+    # Installed is not the same as listening. The app can exit between setup and the take,
+    # and from outside that looks exactly like a healthy device: the demo steps simply do
+    # nothing, on camera. Ask the television to answer for itself.
+    cursor = httpx.get(f"{API}/events", params={"household": HH, "wait": 0}, timeout=30).json()["cursor"]
+    httpx.post(f"{API}/demo", json={"household": HH, "step": "ping"}, timeout=30)
+    alive, waited = False, time.time()
+    while not alive and time.time() - waited < 12:
+        evs = httpx.get(f"{API}/events", params={"household": HH, "since": cursor, "wait": 5}, timeout=30).json()
+        cursor = evs.get("cursor") or cursor
+        alive = any(e["kind"] == "prompter" and (e["data"] or {}).get("cmd") == "alive" for e in evs["events"])
+    check("the television is listening (it answered a ping)", alive,
+          "" if alive else "relaunch it: vega run-app tv/build/aarch64-debug/vitahearttv_aarch64.vpkg")
     now_ist = datetime.now(timezone.utc) + timedelta(hours=3)
     print(f"     Istanbul time {now_ist:%H:%M}; morning slot window is 07:30 to 10:00 for an 08:00 clock")
     print("READY" if ok_all else "NOT READY")
