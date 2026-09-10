@@ -47,3 +47,27 @@ def test_checkin_shows_on_board(ddb):
     c = client(ddb)
     c.post("/checkin", json={"household": "AHMET1"})
     assert c.get("/board", params={"household": "AHMET1"}).json()["checkedInToday"] is True
+
+
+def test_a_cursor_whose_plus_became_a_space_does_not_replay_the_event(ddb):
+    """The bug that answered one Alexa question eight times.
+
+    A cursor is "…+00:00". Interpolated into a URL unencoded, the plus arrives as a
+    space, the range bound falls under the last event, and every poll delivers it again.
+    """
+    c = client(ddb)
+    start = c.get("/events", params={"household": "AHMET1", "wait": 0}).json()["cursor"]
+    c.post("/checkin", json={"household": "AHMET1"})
+    first = c.get("/events", params={"household": "AHMET1", "since": start, "wait": 0}).json()
+    assert first["events"], "expected the check-in on the channel"
+    cursor = first["cursor"]
+    assert "+" in cursor, "this test is meaningless if the cursor carries no offset"
+
+    # exactly what an unencoded query string delivers
+    mangled = cursor.replace("+", " ")
+    again = c.get("/events", params={"household": "AHMET1", "since": mangled, "wait": 0}).json()
+    assert again["events"] == [], f"the event was handed back again: {again['events']}"
+
+    # and the honest cursor still behaves
+    clean = c.get("/events", params={"household": "AHMET1", "since": cursor, "wait": 0}).json()
+    assert clean["events"] == []

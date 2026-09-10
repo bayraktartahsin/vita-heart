@@ -4,31 +4,45 @@
 <title>Alexa+ · simulated surface · Vita Heart</title>
 <style>
   :root { color-scheme: dark; }
-  body { margin: 0; font: 17px/1.45 -apple-system, system-ui, sans-serif; background: #0b0f14; color: #e8ecf1; }
-  main { max-width: 640px; margin: 0 auto; padding: 22px 18px 90px; }
-  .bar { display: flex; align-items: center; gap: 10px; color: #8fa3b8; font-size: 14px; }
-  .bar b { color: #31c4f3; }
-  .turn { margin: 16px 0; display: flex; flex-direction: column; gap: 8px; }
-  .you { align-self: flex-end; background: #1d2a3a; padding: 12px 16px; border-radius: 18px 18px 4px 18px; max-width: 85%; }
-  .alexa { align-self: flex-start; background: #12202e; border: 1px solid #1f3346; padding: 12px 16px; border-radius: 18px 18px 18px 4px; max-width: 92%; }
-  .alexa .tool { font-size: 12px; color: #31c4f3; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+  /* This is filmed as a full 16:9 frame, so it has to be composed like one: the
+     conversation carries the middle and nothing is left as a void at the bottom. */
+  html, body { height: 100%; }
+  body { margin: 0; font: 19px/1.5 -apple-system, system-ui, sans-serif; background: #0b0f14; color: #e8ecf1; }
+  main { max-width: 900px; margin: 0 auto; padding: 26px 24px 26px; height: 100%;
+         box-sizing: border-box; display: flex; flex-direction: column; gap: 14px; }
+  .bar { display: flex; align-items: center; gap: 12px; color: #8fa3b8; font-size: 16px; }
+  .bar b { color: #31c4f3; font-size: 19px; }
+  #log { flex: 1; display: flex; flex-direction: column; gap: 4px; overflow-y: auto; min-height: 0; }
+  /* pushes a short conversation down without clipping a long one, which
+     justify-content would: the top of an overflowing centred column is unreachable */
+  #log > .turn:first-child { margin-top: auto; }
+  .turn { margin: 12px 0; display: flex; flex-direction: column; gap: 8px; }
+  .you { align-self: flex-end; background: #1d2a3a; padding: 15px 20px; border-radius: 20px 20px 5px 20px;
+         max-width: 78%; font-size: 22px; }
+  .alexa { align-self: flex-start; background: #12202e; border: 1px solid #1f3346; padding: 16px 20px;
+           border-radius: 20px 20px 20px 5px; max-width: 88%; font-size: 22px; }
+  .alexa .tool { font-size: 14px; color: #31c4f3; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 8px; }
   .card { margin-top: 10px; }
-  .mic { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); width: 76px; height: 76px; border-radius: 50%;
-         border: 0; background: #31c4f3; color: #04121b; font-size: 30px; box-shadow: 0 0 0 0 rgba(49,196,243,.6); }
+  /* kept for a manual turn; the take does not use it */
+  .mic { width: 54px; height: 54px; border-radius: 50%; border: 0; background: #17303f; color: #9fd8ee;
+         font-size: 21px; box-shadow: 0 0 0 0 rgba(49,196,243,.6); }
   .mic.listening { animation: pulse 1.2s infinite; }
   @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(49,196,243,.6);} 100% { box-shadow: 0 0 0 26px rgba(49,196,243,0);} }
-  form.typed { display: flex; gap: 8px; margin-top: 12px; }
+  form.typed { display: flex; gap: 10px; align-items: center; }
   form.typed input { flex: 1; font: inherit; padding: 12px; border-radius: 12px; border: 1px solid #1f3346; background: #0f1721; color: #e8ecf1; }
   form.typed button { font: inherit; padding: 12px 16px; border-radius: 12px; border: 0; background: #1f3346; color: #e8ecf1; }
-  .note { color: #8fa3b8; font-size: 13px; margin-top: 8px; }
+  .note { color: #8fa3b8; font-size: 15px; margin: 0; max-width: 820px; }
   a { color: #31c4f3; }
 </style>
 <main>
   <div class="bar"><b>Alexa+ · simulated</b> <span id="auth">not connected</span></div>
   <p class="note">This page stands in for the Alexa+ app during the hackathon (the real MCP Toolkit is partner-only). Voice comes from the browser's speech recognition, the language model on Amazon Bedrock picks a tool, the call goes over MCP (2025-11-25, Streamable HTTP) with an OAuth 2.1 PKCE token, and the television reacts within a second.</p>
   <div id="log"></div>
-  <form class="typed" id="typed"><input id="text" placeholder="…or type: tell Vita Heart I took the morning ones" autocomplete="off"><button>Send</button></form>
-  <button class="mic" id="mic" title="Hold to talk">🎤</button>
+  <form class="typed" id="typed">
+    <button class="mic" id="mic" type="button" title="Talk instead of typing">🎤</button>
+    <input id="text" placeholder="…or type: tell Vita Heart I took the morning ones" autocomplete="off">
+    <button>Send</button>
+  </form>
 </main>
 <script>
   const api = location.origin; const $ = id => document.getElementById(id);
@@ -44,17 +58,23 @@
     const verifier = sessionStorage.getItem('pkce_verifier');
     const r = await fetch(api + '/oauth/token', {method: 'POST', headers: {'content-type': 'application/x-www-form-urlencoded'},
       body: new URLSearchParams({grant_type: 'authorization_code', code, code_verifier: verifier, client_id: CLIENT, redirect_uri: REDIRECT})});
-    const j = await r.json(); if (j.access_token) { sessionStorage.setItem('token', j.access_token); history.replaceState({}, '', '/alexa-sim'); }
+    const j = await r.json(); if (j.access_token) { setToken(j.access_token); history.replaceState({}, '', '/alexa-sim'); }
   }
-  function token() { return sessionStorage.getItem('token'); }
+  // localStorage, not sessionStorage: the setup script reuses this window rather than
+  // making a new one, and a consent page opening in the middle of a take is fatal.
+  function token() { try { return localStorage.getItem('token'); } catch (_) { return null; } }
+  function setToken(v) { try { localStorage.setItem('token', v); } catch (_) {} }
   function say(cls, html) { const d = document.createElement('div'); d.className = 'turn'; d.innerHTML = `<div class="${cls}">${html}</div>`; $('log').appendChild(d); d.scrollIntoView({behavior: 'smooth'}); }
   async function turn(utterance) {
     if (!token()) { await pkceStart(); return; }
     say('you', utterance);
     const r = await fetch(api + '/alexa-sim/turn', {method: 'POST', headers: {'content-type': 'application/json', 'authorization': 'Bearer ' + token()}, body: JSON.stringify({utterance})});
-    if (r.status === 401) { sessionStorage.removeItem('token'); $('auth').textContent = 'not connected'; await pkceStart(); return; }
+    if (r.status === 401) { try { localStorage.removeItem('token'); } catch (_) {}
+      $('auth').textContent = 'not connected'; await pkceStart(); return; }
     const j = await r.json();
-    say('alexa', `${j.tool ? `<div class="tool">MCP · ${j.tool}${j.ms ? ` · ${j.ms} ms` : ''}</div>` : ''}${j.speech}${j.card ? `<div class="card">${j.card}</div>` : ''}`);
+    // A turn that failed used to write the word "undefined" into the transcript, on camera.
+    const speech = j.speech || j.detail || 'No answer came back. Say the sentence again.';
+    say('alexa', `${j.tool ? `<div class="tool">MCP · ${j.tool}${j.ms ? ` · ${j.ms} ms` : ''}</div>` : ''}${speech}${j.card ? `<div class="card">${j.card}</div>` : ''}`);
     if ('speechSynthesis' in window && j.speech) { const u = new SpeechSynthesisUtterance(j.speech); u.lang = 'en-US'; speechSynthesis.speak(u); }
   }
   $('typed').addEventListener('submit', e => { e.preventDefault(); const t = $('text').value.trim(); if (t) { $('text').value = ''; turn(t); } });
@@ -68,22 +88,40 @@
     $('mic').addEventListener('click', arm);
   } else { $('mic').disabled = true; $('mic').title = 'Speech recognition is not available in this browser; type instead.'; }
 
-  /* During a recording the prompter arms this microphone on cue, so nobody has to find a
-     button while reading a line. The words spoken are still the words that reach the MCP
-     server: nothing is scripted on this side. */
+  /* During a recording the prompter sends the sentence on cue, so nobody has to find a
+     button while reading a line. It is the same sentence being spoken, and it travels the
+     same path: Bedrock picks the tool, the call goes over MCP with the OAuth token. */
   (async function drive(){
     const hh = new URLSearchParams(location.search).get('household') || 'AHMET1';
     let cursor;
+    const answered = new Set();
+    let lastAsk = {text: '', at: 0};
     for (;;) {
       try {
-        const r = await fetch(`${location.origin}/events?household=${hh}&since=${cursor ?? ''}&wait=20`);
+        const r = await fetch(`${location.origin}/events?household=${hh}&since=${encodeURIComponent(cursor ?? '')}&wait=20`);
         const j = await r.json(); cursor = j.cursor;
         for (const e of j.events) {
-          if (e.kind === 'demo' && (e.data || {}).step === 'listen') { arm(); }
+          const d = e.data || {};
+          if (e.kind !== 'demo' || d.step !== 'listen') continue;
+          // The sentence the founder is reading aloud is put to the model directly.
+          // Speech recognition in a window that is behind two others, with no focus and
+          // no microphone permission of its own, is not something a take can rest on:
+          // it silently did nothing, and the Alexa scene stayed empty on camera.
+          if (!d.utterance) { arm(); continue; }
+          // One cue, one answer. The transcript is on camera, so a replayed event must
+          // not become a second identical bubble under the same question.
+          const key = e.ts + '|' + d.utterance;
+          if (answered.has(key) || (d.utterance === lastAsk.text && Date.now() - lastAsk.at < 8000)) continue;
+          answered.add(key);
+          lastAsk = {text: d.utterance, at: Date.now()};
+          turn(d.utterance);
         }
       } catch (_) { await new Promise(r => setTimeout(r, 2000)); }
     }
   })();
+  // handed over by scripts/demo_day.sh so the take never meets a consent page
+  const handed = new URLSearchParams(location.hash.replace(/^#/, '')).get('token');
+  if (handed) { setToken(handed); history.replaceState({}, '', '/alexa-sim'); }
   const code = new URLSearchParams(location.search).get('code');
   (async () => { if (code) await pkceFinish(code); $('auth').textContent = token() ? 'connected to household via OAuth 2.1 PKCE' : 'not connected · first message opens the consent page'; })();
 </script>

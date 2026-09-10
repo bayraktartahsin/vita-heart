@@ -145,15 +145,16 @@ function advance(){
   // the television performs the step itself: no click reaches the simulator from a script,
   // and a take must not depend on a hand finding a key while a sentence is being read
   camera(ph.b.scene);
-  if (ph.k === 'do' && ph.b.drive) { drive(ph.b.drive, ph.b.scene); }
+  if (ph.k === 'do' && ph.b.drive) { drive(ph.b.drive, ph.b.scene, ph.b.ask); }
   if (ph.k === 'end') { drive('endrecord'); }
   draw(); state();
 }
 
-function drive(step, scene){
+function drive(step, scene, utterance){
   const source = watchReady ? 'watch' : 'recorded';
   fetch(`${API}/demo`, {method:'POST', headers:{'content-type':'application/json'},
-    body: JSON.stringify({household: HH, step, source, scene: scene ?? null})}).catch(()=>{});
+    body: JSON.stringify({household: HH, step, source, scene: scene ?? null,
+      utterance: utterance ?? null})}).catch(()=>{});
 }
 
 // The camera follows the script. obs_director.py hears this on the events channel and
@@ -181,6 +182,14 @@ function loop(){
 }
 
 function begin(){
+  // Starting a take the television cannot hear costs the whole take: it happened once,
+  // and every step was emitted correctly into a screen that had stopped listening.
+  if (!tvSeen || (Date.now() - tvSeen) / 1000 > 26) {
+    $('nextText').textContent = 'The television is not listening. Relaunch the app (sh scripts/demo_day.sh), '
+      + 'wait for TV: listening, then press Start.';
+    $('tv').classList.add('bad');
+    return;
+  }
   const big = $('big'); let n = 3;
   big.style.display = 'flex'; $('bigN').textContent = n; $('bigT').textContent = 'the recording starts by itself';
   const id = setInterval(() => {
@@ -244,14 +253,28 @@ function state(){
   fetch(`${API}/prompter`, {method:'POST', headers:{'content-type':'application/json'},
     body: JSON.stringify({household: HH, cmd: 'state', index: PHASES[p].i, elapsed: Math.round(elapsed), running})}).catch(()=>{});
 }
+// ---- is the television listening? ----------------------------------------------
+let tvSeen = 0;
+function tvLight(){
+  const el = $('tv'), age = (Date.now() - tvSeen) / 1000;
+  const ok = tvSeen && age < 26;                 // it beats every 10 s
+  el.textContent = ok ? 'TV: listening' : (tvSeen ? `TV: silent ${Math.round(age)}s` : 'TV: ?');
+  el.classList.toggle('ok', !!ok);
+  el.classList.toggle('bad', !ok);
+}
+setInterval(tvLight, 1000);
+
 (async function poll(){
   for(;;){
     try{
-      const r = await fetch(`${API}/events?household=${HH}&since=${cursor ?? ''}&wait=20`);
+      const r = await fetch(`${API}/events?household=${HH}&since=${encodeURIComponent(cursor ?? '')}&wait=20`);
       const j = await r.json(); cursor = j.cursor;
       for (const e of j.events){
         if (e.kind !== 'prompter') continue;
         const c = (e.data || {}).cmd;
+        // the television's heartbeat. It is the same channel the demo steps travel on,
+        // so a beat proves the steps will land — not that the app is merely on screen.
+        if (c === 'alive' || c === 'device') { tvSeen = Date.now(); tvLight(); continue; }
         if (c === 'play' && !running) begin();
         else if (c === 'pause') pause();
         else if (c === 'reset') reset();

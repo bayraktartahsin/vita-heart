@@ -55,18 +55,79 @@ export class VitaHeartApi {
     return `${this.baseUrl}${path}${q ? `?${q}` : ''}`;
   }
 
-  private async json<T>(input: string, init?: {method?: string; body?: string}): Promise<T> {
-    const res = await fetch(input, {...init, headers: {'content-type': 'application/json'}});
-    if (!res.ok) {
-      let detail = res.statusText;
-      try {
-        detail = (await res.json()).detail ?? detail;
-      } catch (_) {
-        // the body was not JSON; the status text is the best we have
-      }
-      throw new ApiError(res.status, detail);
+  /**
+   * At most a few requests at once.
+   *
+   * Every event used to start its own board fetch. A batch of ten arriving together —
+   * a reset, or a rehearsal — fired ten at once, and after a burst like that the
+   * television stopped talking to the API altogether while still rendering its last
+   * frame and reporting itself live. The long poll is exempt: it is one request that is
+   * meant to be held open, and nothing should ever queue behind it.
+   */
+  private inFlight = 0;
+  private waiting: (() => void)[] = [];
+
+  private async gate<T>(fn: () => Promise<T>): Promise<T> {
+    if (this.inFlight >= 3) {
+      await new Promise<void>(r => this.waiting.push(r));
     }
-    return (await res.json()) as T;
+    this.inFlight += 1;
+    try {
+      return await fn();
+    } finally {
+      this.inFlight -= 1;
+      this.waiting.shift()?.();
+    }
+  }
+
+  /**
+   * Every request has a deadline.
+   *
+   * Vega's fetch has none of its own. A long-poll whose socket dies quietly leaves the
+   * await pending for ever: no rejection, so no retry, and the screen goes on saying
+   * "live" while nothing reaches it again. That is how a recording dies without
+   * producing a single error — the television simply stops obeying, still lit.
+   */
+  private async json<T>(input: string, init?: {method?: string; body?: string},
+                        timeoutMs = 20000, held = false): Promise<T> {
+    return held ? this.request<T>(input, init, timeoutMs)
+                : this.gate(() => this.request<T>(input, init, timeoutMs));
+  }
+
+  private async request<T>(input: string, init?: {method?: string; body?: string},
+                           timeoutMs = 20000): Promise<T> {
+    const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const run = async (): Promise<T> => {
+      const res = await fetch(input, {
+        ...init, headers: {'content-type': 'application/json'}, signal: ctrl?.signal,
+      } as any);
+      if (!res.ok) {
+        let detail = res.statusText;
+        try {
+          detail = (await res.json()).detail ?? detail;
+        } catch (_) {
+          // the body was not JSON; the status text is the best we have
+        }
+        throw new ApiError(res.status, detail);
+      }
+      return (await res.json()) as T;
+    };
+    // Promise.race as well as the abort: if this runtime ignores the signal, the loop
+    // must still be released, or the deadline is decorative.
+    const deadline = new Promise<never>((_resolve, reject) => {
+      timer = setTimeout(() => {
+        ctrl?.abort();
+        reject(new ApiError(0, `no answer within ${timeoutMs} ms`));
+      }, timeoutMs);
+    });
+    try {
+      return await Promise.race([run(), deadline]);
+    } finally {
+      if (timer !== undefined) {
+        clearTimeout(timer);
+      }
+    }
   }
 
   board(): Promise<Board> {
@@ -74,7 +135,10 @@ export class VitaHeartApi {
   }
 
   events(since: string | undefined, waitSeconds = 20): Promise<{events: LiveEvent[]; cursor: string}> {
-    return this.json(this.url('/events', {since, wait: waitSeconds}));
+    // the server holds the request for `waitSeconds`; anything past that plus a margin
+    // is a socket that is never going to answer
+    return this.json(this.url('/events', {since, wait: waitSeconds}), undefined,
+                     waitSeconds * 1000 + 10000, true);
   }
 
   setClock(times: Record<string, string>): Promise<{clock: Record<string, string>}> {

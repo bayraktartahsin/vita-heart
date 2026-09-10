@@ -51,6 +51,10 @@ class FakeObs:
     def __init__(self):
         self.seen: list[tuple[str, dict]] = []
         self.authenticated = False
+        self.inputs: list[dict] = [{"inputName": n, "inputKind": "screen_capture"}
+                                   for n in SCENES.values()]
+        self.items: dict[str, list[str]] = {s: [SCENES[s]] for s in SCENES}
+        self.filters: dict[str, list[dict]] = {}
 
     async def handler(self, ws):
         await ws.send(json.dumps({"op": 0, "d": {
@@ -72,13 +76,29 @@ class FakeObs:
                 "requestStatus": {"result": True, "code": 100},
                 "responseData": self.reply(kind, data)}}))
 
-    @staticmethod
-    def reply(kind: str, data: dict) -> dict:
+    def reply(self, kind: str, data: dict) -> dict:
         if kind == "GetSceneList":
             return {"scenes": [{"sceneName": n} for n in SCENES]}
+        if kind == "GetInputList":
+            return {"inputs": list(self.inputs)}
+        if kind == "CreateInput":
+            self.inputs.append({"inputName": data["inputName"], "inputKind": data["inputKind"]})
+            self.items.setdefault(data["sceneName"], []).append(data["inputName"])
+            return {}
+        if kind == "CreateSceneItem":
+            self.items.setdefault(data["sceneName"], []).append(data["sourceName"])
+            return {}
+        if kind == "GetSourceFilterList":
+            return {"filters": list(self.filters.get(data["sourceName"], []))}
+        if kind == "CreateSourceFilter":
+            self.filters.setdefault(data["sourceName"], []).append({"filterName": data["filterName"],
+                                                                    "filterKind": data["filterKind"]})
+            return {}
         if kind == "GetSceneItemList":
-            return {"sceneItems": [{"sourceName": SCENES[data["sceneName"]], "sceneItemId": 1,
-                                    "inputKind": "screen_capture"}]}
+            return {"sceneItems": [
+                {"sourceName": n, "sceneItemId": i + 1,
+                 "inputKind": next(x["inputKind"] for x in self.inputs if x["inputName"] == n)}
+                for i, n in enumerate(self.items.get(data["sceneName"], []))]}
         if kind == "GetInputPropertiesListPropertyItems":
             return {"propertyItems": WINDOWS}
         if kind == "GetSceneItemTransform":
@@ -131,6 +151,20 @@ async def test_it_authenticates_and_aims_every_scene_at_the_right_window(fake):
     assert abs(kept_w / kept_h - 16 / 9) < 0.01, "what is left must be a 16:9 television"
     # the browser windows are never cropped: their address bar is the proof it runs on AWS
     assert fits["Vita heart"]["cropTop"] == 0 and fits["Alexa"]["cropTop"] == 0
+
+    # Sound, in every scene. OBS's own "Desktop Audio" records silence on macOS without a
+    # virtual device, so the Alexa voice would simply be missing from the video.
+    audio = [i for i in fake.inputs if i["inputKind"] == "sck_audio_capture"]
+    assert len(audio) == 1, "expected one ScreenCaptureKit audio source"
+    for scene in SCENES:
+        assert audio[0]["inputName"] in fake.items[scene], f"no audio in scene {scene!r}"
+    settings = [d for k, d in fake.seen if k == "CreateInput"][0]["inputSettings"]
+    assert settings["type"] == 0, "desktop capture, not a single application"
+
+    # The narration cannot be re-recorded later, so it must not be allowed to clip.
+    vols = {d["inputName"]: d["inputVolumeDb"] for k, d in fake.seen if k == "SetInputVolume"}
+    assert vols.get("Mic/Aux") == -6.0, "the microphone needs headroom"
+    assert any(f["filterKind"] == "limiter_filter" for f in fake.filters.get("Mic/Aux", []))
 
 
 @pytest.mark.asyncio

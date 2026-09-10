@@ -23,7 +23,10 @@ import contextlib
 import hashlib
 import io
 import json
+import os
+import subprocess
 import sys
+import time
 from pathlib import Path
 
 import httpx
@@ -34,6 +37,9 @@ API = "https://rrjb1x8j2b.execute-api.eu-north-1.amazonaws.com"
 HOUSEHOLD = "AHMET1"
 OBS_CONFIG = Path.home() / "Library/Application Support/obs-studio/plugin_config/obs-websocket/config.json"
 CANVAS = (1920, 1080)
+ROOT = Path(__file__).resolve().parent.parent
+VPKG = ROOT / "tv" / "build" / "aarch64-debug" / "vitahearttv_aarch64.vpkg"
+DEAF_AFTER = 45.0     # the television beats every 10 s
 
 # Which OBS scene is which surface. The names in the scene collection are the
 # founder's own, so match on a word rather than demand a rename. Most specific first:
@@ -145,6 +151,62 @@ async def screen_crop(obs: Obs, source: str, source_w: float, source_h: float) -
             "cropRight": round((W - right - 1) * k), "cropBottom": 0}
 
 
+AUDIO_SOURCE = "System audio"
+
+
+async def ensure_audio(obs: Obs, scenes: dict[str, str], quiet: bool = False) -> None:
+    """Make sure the recording will actually have sound in it.
+
+    OBS's "Desktop Audio" on macOS is a CoreAudio output capture, and macOS gives no
+    loopback of its own: without a virtual device installed it records silence. So the
+    Alexa voice, which the page speaks aloud, would simply be missing from the video and
+    nobody would know until playback. ScreenCaptureKit's desktop capture needs no virtual
+    device and is indifferent to the output device, so it works with AirPods on.
+    """
+    inputs = {i["inputName"]: i["inputKind"] for i in (await obs.call("GetInputList"))["inputs"]}
+    first = next((scenes[r] for r in ("TV", "FAMILY", "ALEXA") if r in scenes), None)
+    if not first:
+        return
+    if AUDIO_SOURCE not in inputs:
+        await obs.call("CreateInput", {"sceneName": first, "inputName": AUDIO_SOURCE,
+                                       "inputKind": "sck_audio_capture",
+                                       "inputSettings": {"type": 0}})
+    else:
+        await obs.call("SetInputSettings", {"inputName": AUDIO_SOURCE, "overlay": True,
+                                            "inputSettings": {"type": 0}})
+    # A source only reaches the mix while its scene is on air, so it belongs in all three.
+    for role in ("TV", "FAMILY", "ALEXA"):
+        scene = scenes.get(role)
+        if not scene:
+            continue
+        items = (await obs.call("GetSceneItemList", {"sceneName": scene}))["sceneItems"]
+        if not any(i["sourceName"] == AUDIO_SOURCE for i in items):
+            with contextlib.suppress(RuntimeError):
+                await obs.call("CreateSceneItem", {"sceneName": scene, "sourceName": AUDIO_SOURCE})
+    with contextlib.suppress(RuntimeError):
+        await obs.call("SetInputMute", {"inputName": AUDIO_SOURCE, "inputMuted": False})
+
+    # The narration is the one track that cannot be re-recorded later, and an AirPods
+    # mic ran into the ceiling at 0 dB on a quiet three-second test: clipped speech is
+    # not fixable in an edit. A little headroom and a limiter, which is what anyone
+    # recording a voice would do, and no gate — a gate that mistimes eats a first word.
+    for name in ("Mic/Aux",):
+        with contextlib.suppress(RuntimeError):
+            await obs.call("SetInputVolume", {"inputName": name, "inputVolumeDb": -6.0})
+        have = {f["filterName"] for f in
+                (await obs.call("GetSourceFilterList", {"sourceName": name}))["filters"]}
+        if "Ceiling" not in have:
+            with contextlib.suppress(RuntimeError):
+                await obs.call("CreateSourceFilter", {
+                    "sourceName": name, "filterName": "Ceiling",
+                    "filterKind": "limiter_filter",
+                    "filterSettings": {"threshold": -3.0, "release_time": 60}})
+                if not quiet:
+                    print("  AUDIO  microphone at -6 dB with a limiter, so speech cannot clip")
+    if not quiet:
+        print(f"  AUDIO  '{AUDIO_SOURCE}' (ScreenCaptureKit) in all three scenes")
+
+
 async def aim(obs: Obs, quiet: bool = False) -> dict[str, str]:
     """Point every scene at its window and make it fill the frame."""
     names = [s["sceneName"] for s in (await obs.call("GetSceneList"))["scenes"]]
@@ -196,13 +258,37 @@ async def aim(obs: Obs, quiet: bool = False) -> dict[str, str]:
             "sceneItemTransform": transform})
         if not quiet:
             print(f"  {role:<6} '{scene}' → {match['itemName']}")
+    await ensure_audio(obs, scenes, quiet)
     return scenes
+
+
+def relaunch_television() -> None:
+    """Put the app back on the device.
+
+    The television has been seen to stop reading its events channel while still
+    rendering its last frame and still calling itself live — from the outside, a
+    television that is merely lit is indistinguishable from one that is listening. It
+    beats every ten seconds now, so silence is detectable, and a relaunch is cheap
+    between takes. Never during one: a take with a deaf television is already lost, but
+    a relaunch on camera would be a second failure on top of the first.
+    """
+    if not VPKG.exists():
+        print("  watchdog: no build to relaunch; run sh scripts/demo_day.sh")
+        return
+    env = dict(os.environ, PATH=f"{Path.home()}/vega/bin:{os.environ.get('PATH', '')}")
+    r = subprocess.run(["vega", "run-app", str(VPKG)], capture_output=True, text=True,
+                       env=env, timeout=240)
+    ok = "Successfully launched" in (r.stdout + r.stderr)
+    print(f"  watchdog: television relaunched" if ok else
+          f"  watchdog: relaunch failed — {(r.stderr or r.stdout).strip()[:120]}")
 
 
 async def follow(obs: Obs, scenes: dict[str, str]) -> None:
     """Switch the camera, and run the recording, as the prompter moves."""
     print("director: following the prompter (ctrl-C to stop)")
     cursor = ""
+    beat = time.monotonic()
+    recording = False
     async with httpx.AsyncClient(timeout=40) as http:
         while True:
             try:
@@ -215,15 +301,20 @@ async def follow(obs: Obs, scenes: dict[str, str]) -> None:
                 continue
             cursor = body.get("cursor") or cursor
             for ev in body.get("events", []):
+                data = ev.get("data") or {}
+                if ev.get("kind") == "prompter" and data.get("cmd") in ("alive", "device"):
+                    beat = time.monotonic()
+                    continue
                 if ev.get("kind") != "demo":
                     continue
-                data = ev.get("data") or {}
                 step, scene = data.get("step"), data.get("scene")
                 if step == "record":
+                    recording = True
                     with contextlib.suppress(RuntimeError):
                         await obs.call("StartRecord")
                         print("  ● recording")
                 elif step == "endrecord":
+                    recording = False
                     with contextlib.suppress(RuntimeError):
                         await obs.call("StopRecord")
                         print("  ■ stopped — the file is in ~/Movies")
@@ -231,6 +322,11 @@ async def follow(obs: Obs, scenes: dict[str, str]) -> None:
                     with contextlib.suppress(RuntimeError):
                         await obs.call("SetCurrentProgramScene", {"sceneName": scenes[scene]})
                         print(f"  → {scene}")
+
+            if not recording and time.monotonic() - beat > DEAF_AFTER:
+                print(f"  watchdog: no beat for {DEAF_AFTER:.0f} s — the television is deaf")
+                await asyncio.get_running_loop().run_in_executor(None, relaunch_television)
+                beat = time.monotonic()
 
 
 OFFLINE = ("director: OBS is not listening.\n"

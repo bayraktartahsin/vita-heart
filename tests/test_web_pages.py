@@ -26,3 +26,21 @@ def test_every_page_names_the_household_it_reads():
         html = (WEB / page).read_text(encoding="utf-8")
         if "fetch(" in html:
             assert "household" in html, page
+
+
+def test_the_surfaces_do_not_wait_on_a_timer_or_a_microphone():
+    """Two things that cost a take, and cannot be seen by reading the page in a browser.
+
+    The family page changed on a fifteen-second timer, so the change landed long after
+    the sentence it belonged to. The Alexa page armed a microphone in a window that was
+    behind two others, with no permission of its own, and silently did nothing.
+    """
+    web = Path(__file__).resolve().parent.parent / "api" / "vitaheart" / "web"
+    family = (web / "family.html").read_text(encoding="utf-8")
+    assert "/events?household=" in family, "the family page must be on the live channel"
+
+    alexa = (web / "alexa-sim.html").read_text(encoding="utf-8")
+    assert "d.utterance" in alexa and "turn(d.utterance)" in alexa, \
+        "the Alexa page must answer the prompter's sentence without the microphone"
+    assert "localStorage.getItem('token')" in alexa, \
+        "the token must survive a reopened window, or a consent page opens mid-take"

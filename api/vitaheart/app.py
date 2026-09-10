@@ -58,6 +58,12 @@ def get_events(household: str = Query(..., min_length=4, max_length=12),
     The response always carries `cursor`: pass it back unchanged.
     """
     _profile_or_404(household)
+    # A cursor is an ISO timestamp ending "+00:00". A client that drops it into a URL
+    # without encoding it sends that plus as a space, the range bound lands just under
+    # the last event, and every poll hands the same event back: one Alexa question was
+    # answered eight times. Clients encode it now; this repairs the ones that do not.
+    if since and " " in since:
+        since = since.replace(" ", "+")
     deadline = time.monotonic() + wait
     cursor = since or store.now_iso()
     while True:
@@ -531,7 +537,13 @@ def alexa_sim_turn(body: TurnIn, request: Request) -> dict:
     if not household:
         raise HTTPException(401, "connect first")
     from alexa import sim
-    return sim.turn(household, body.utterance)
+    out = sim.turn(household, body.utterance)
+    # Put the turn on the household's channel. A turn that happened only inside one
+    # browser tab cannot be checked by anything: the rehearsal, and the pre-flight, need
+    # to know the Alexa surface actually answered rather than sat there looking ready.
+    store.emit(household, "alexa", {"utterance": body.utterance[:160],
+                                    "tool": out.get("tool"), "ms": out.get("ms")})
+    return out
 
 
 # ---- teleprompter (recording day) ------------------------------------------------------
@@ -543,6 +555,9 @@ class DemoIn(BaseModel):
     # Which surface the take is on. The director listens for this and switches the
     # camera itself, so nobody has to find a function key mid-sentence.
     scene: str | None = Field(default=None, pattern="^(TV|FAMILY|ALEXA)$")
+    # The sentence the Alexa surface should put to the model. The microphone in a
+    # background browser window is not something a take can depend on.
+    utterance: str | None = Field(default=None, max_length=160)
 
 
 @app.post("/demo")
@@ -556,7 +571,8 @@ def demo_step(body: DemoIn) -> dict:
     """
     _profile_or_404(body.household)
     store.emit(body.household, "demo",
-               {"step": body.step, "source": body.source, "scene": body.scene})
+               {"step": body.step, "source": body.source, "scene": body.scene,
+                "utterance": body.utterance})
     return {"ok": True, "step": body.step, "scene": body.scene}
 
 

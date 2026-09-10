@@ -83,7 +83,7 @@ let cursor;
 (async function poll(){
   for(;;){
     try{
-      const r = await fetch(`${API}/events?household=${HH}&since=${cursor ?? ''}&wait=20`);
+      const r = await fetch(`${API}/events?household=${HH}&since=${encodeURIComponent(cursor ?? '')}&wait=20`);
       const j = await r.json(); cursor = j.cursor; $('conn').textContent = 'linked to the prompter';
       for (const e of j.events){
         if (e.kind !== 'prompter') continue;

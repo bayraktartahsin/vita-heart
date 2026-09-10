@@ -40,15 +40,33 @@ export const App = ({apiBaseUrl = API_BASE_URL, household: initialHousehold}: {a
 
   const api = useMemo(() => (household ? new VitaHeartApi(apiBaseUrl, household) : null), [apiBaseUrl, household]);
 
+  // One board request at a time, and a burst of events collapses into one more.
+  // Ten events arriving together used to mean ten concurrent fetches.
+  const loading = useRef(false);
+  const stale = useRef(false);
+
   const refresh = useCallback(async () => {
     if (!api) {
       return;
     }
+    if (loading.current) {
+      stale.current = true;
+      return;
+    }
+    loading.current = true;
     try {
-      setBoard(await api.board());
-      setError(null);
+      for (;;) {
+        stale.current = false;
+        setBoard(await api.board());
+        setError(null);
+        if (!stale.current) {
+          break;
+        }
+      }
     } catch (e) {
       setError(e instanceof ApiError ? `${e.status}: ${e.message}` : String(e));
+    } finally {
+      loading.current = false;
     }
   }, [api]);
 
@@ -69,6 +87,14 @@ export const App = ({apiBaseUrl = API_BASE_URL, household: initialHousehold}: {a
   }, [apiBaseUrl, household]);
 
   useEffect(() => { report('device'); }, [report]);
+
+  // A heartbeat, so "is the television listening?" is answerable at any moment instead
+  // of once, in pre-flight, minutes before the take. This runs through the same events
+  // channel the demo steps arrive on, so if the beat stops, the steps have stopped too.
+  useEffect(() => {
+    const id = setInterval(() => { report('alive'); }, 10000);
+    return () => clearInterval(id);
+  }, [report]);
 
   const onEvent = useCallback((e: LiveEvent) => {
     if (['message', 'checkin', 'dose', 'board', 'med'].includes(e.kind)) {

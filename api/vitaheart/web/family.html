@@ -68,5 +68,22 @@
     await fetch(api + '/family/messages', {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({household, author, text: $('text').value})});
     $('text').value = ''; load();
   });
-  load(); setInterval(load, 15000);
+  load();
+  // The long-poll, not a fifteen-second timer. On camera the founder says "and the family
+  // sees it" and points at this page: a change that arrives up to fifteen seconds later
+  // has already lost the sentence it belonged to.
+  (async function live(){
+    let cursor;
+    for (;;) {
+      try {
+        const r = await fetch(`${api}/events?household=${household}&since=${encodeURIComponent(cursor ?? '')}&wait=20`);
+        const j = await r.json();
+        cursor = j.cursor;
+        if (j.events.some(e => ['checkin','dose','message','summary','med','signal','session','board'].includes(e.kind))) {
+          await load();
+        }
+      } catch (_) { await new Promise(r => setTimeout(r, 2000)); }
+    }
+  })();
+  setInterval(load, 30000);   // a floor under the long-poll, in case it stalls
 </script>
