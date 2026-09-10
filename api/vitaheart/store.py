@@ -183,7 +183,19 @@ def set_clock(code: str, times: dict[str, str]) -> None:
 # ---- heart sessions (Phase 3) -------------------------------------------------------
 
 def start_session(code: str, session_id: str, source: str) -> dict[str, Any]:
+    """Open a session, and make sure it is the only one open.
+
+    Session keys are SESSION#<random hex>, so "the live one" was decided by hex order
+    rather than by time: start a second session and the television could be holding one
+    id while the wrist posted into the other, leaving a screen that says it is waiting
+    for a heart rate that is arriving.
+    """
     ts = now_iso()
+    for old in _live_sessions(code):
+        table().update_item(Key={"PK": _hh(code), "SK": old["SK"]},
+                            UpdateExpression="SET #s = :s, finished = :f",
+                            ExpressionAttributeNames={"#s": "state"},
+                            ExpressionAttributeValues={":s": "abandoned", ":f": ts})
     item = {"PK": _hh(code), "SK": f"SESSION#{session_id}", "id": session_id, "started": ts, "source": source, "state": "live"}
     table().put_item(Item=item)
     emit(code, "session", {"id": session_id, "state": "live", "source": source})
@@ -207,13 +219,42 @@ def finish_session(code: str, session_id: str, summary: dict[str, Any]) -> None:
     emit(code, "session", {"id": session_id, "state": "finished", "summary": summary})
 
 
-def live_session(code: str) -> dict[str, Any] | None:
+def reset_demo(code: str) -> dict[str, Any]:
+    """Put the household back to the start of the take.
+
+    A retake that begins with the day already checked in and the tablet already
+    confirmed shows a screen with nothing left to do, which is worse than the mistake
+    that caused the retake. Nothing here touches the medicines or the clock: those cost
+    a model call to rebuild and are not what goes wrong.
+    """
+    day = today()
+    t = table()
+    had_checkin = checkin_today(code) is not None
+    t.delete_item(Key={"PK": _hh(code), "SK": f"CHECKIN#{day}"})
+    r = t.query(KeyConditionExpression=Key("PK").eq(_hh(code)) & Key("SK").begins_with(f"DOSE#{day}#"))
+    doses = r.get("Items", [])
+    for i in doses:
+        t.delete_item(Key={"PK": i["PK"], "SK": i["SK"]})
+    live = live_session(code)
+    if live:
+        t.update_item(Key={"PK": _hh(code), "SK": f"SESSION#{live['id']}"},
+                      UpdateExpression="SET #s = :s, finished = :f",
+                      ExpressionAttributeNames={"#s": "state"},
+                      ExpressionAttributeValues={":s": "abandoned", ":f": now_iso()})
+    emit(code, "board", {"reset": True})
+    return {"checkin": had_checkin, "doses": len(doses), "session": bool(live)}
+
+
+def _live_sessions(code: str) -> list[dict[str, Any]]:
     r = table().query(KeyConditionExpression=Key("PK").eq(_hh(code)) & Key("SK").begins_with("SESSION#"),
-                      ScanIndexForward=False, Limit=5)
-    for i in r.get("Items", []):
-        if i.get("state") == "live":
-            return plain(i)
-    return None
+                      ScanIndexForward=False, Limit=40)
+    return [i for i in r.get("Items", []) if i.get("state") == "live"]
+
+
+def live_session(code: str) -> dict[str, Any] | None:
+    # newest by clock, not by the hex that happens to sort last
+    live = sorted(_live_sessions(code), key=lambda i: str(i.get("started", "")))
+    return plain(live[-1]) if live else None
 
 
 # ---- Ring signals, summaries, trace (Phase 4) ------------------------------------

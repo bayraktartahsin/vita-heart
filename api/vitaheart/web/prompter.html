@@ -57,6 +57,7 @@
     <button id="watch">Watch: not here</button>
     <button id="voice">voice off</button>
     <button id="mirror">mirror</button>
+    <button id="again">Start again</button>
     <button id="startBtn" class="on">Start</button>
   </span>
 </div>
@@ -193,6 +194,28 @@ function begin(){
 function pause(){ running = false; $('mode').textContent = 'PAUSED'; state(); }
 function reset(){ running = false; elapsed = 0; p = 0; phaseStart = 0; $('clock').textContent = '0:00'; draw(); state(); }
 
+// A mistake three sentences in should cost one button. Stop the recording, clear the
+// check-in, the confirmed dose and any open session, and come back to the first line.
+// The bad take stays in ~/Movies rather than being deleted from under you.
+let restarting = false;
+async function startAgain(){
+  if (restarting) return;
+  restarting = true;
+  const b = $('again'), was = b.textContent;
+  b.textContent = 'resetting…';
+  running = false;
+  drive('endrecord');
+  try {
+    await fetch(`${API}/demo/reset`, {method:'POST', headers:{'content-type':'application/json'},
+      body: JSON.stringify({household: HH})});
+  } catch (err) { /* the television is refreshed by the events channel either way */ }
+  shown = null;
+  reset();
+  b.textContent = was;
+  $('nextText').textContent = 'Ready. Press Start when you are.';
+  restarting = false;
+}
+
 /* ---- voice: move when the sentence ends, not when a clock says so ---- */
 const norm = s => s.toLowerCase().replace(/[^a-z0-9çğıöşü ]/g, ' ').replace(/\s+/g, ' ').trim();
 function listen(){
@@ -248,6 +271,7 @@ $('voice').onclick = () => {
   draw();
 };
 $('mirror').onclick = () => document.body.classList.toggle('mirror');
+$('again').onclick = startAgain;
 $('watch').onclick = () => {
   watchReady = !watchReady;
   localStorage.setItem('watchReady', watchReady ? '1' : '0');
@@ -262,6 +286,8 @@ addEventListener('keydown', e => {
   if (e.code === 'ArrowRight') { e.preventDefault(); advance(); }
   if (e.code === 'ArrowLeft' && p > 0) { e.preventDefault(); p--; phaseStart = elapsed; draw(); }
   if (e.key === 'r') reset();
+  // shift-R is the full one: the screen state goes back too
+  if (e.key === 'R') startAgain();
 });
 draw(); setInterval(loop, 120);
 </script>

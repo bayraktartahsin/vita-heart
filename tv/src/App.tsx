@@ -228,7 +228,10 @@ export const App = ({apiBaseUrl = API_BASE_URL, household: initialHousehold}: {a
 
   return (
     <Shell tab={shell.tab} title={shell.title} accent={shell.accent} subtitle={shell.subtitle}
-      status={screen === 'session' ? (latestBpm === null ? 'waiting for the Watch' : 'Watch connected') : liveLabel}
+      status={screen === 'session'
+        ? (latestBpm === null ? 'waiting for the wrist'
+          : session?.source === 'watch' ? 'Watch connected' : 'recorded trace')
+        : liveLabel}
       help={shell.help}>
       <TVFocusGuideView style={{flex: 1}} autoFocus>
         {screen === 'pairing' ? (

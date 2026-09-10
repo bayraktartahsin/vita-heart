@@ -560,6 +560,24 @@ def demo_step(body: DemoIn) -> dict:
     return {"ok": True, "step": body.step, "scene": body.scene}
 
 
+class ResetIn(BaseModel):
+    household: str = Field(min_length=4, max_length=12)
+
+
+@app.post("/demo/reset")
+def demo_reset(body: ResetIn) -> dict:
+    """Start the take again.
+
+    A mistake three sentences in should cost one button, not a rebuild of the demo.
+    Clears the check-in, the confirmed doses and any session left open, then sends the
+    television back to the board.
+    """
+    _profile_or_404(body.household)
+    out = store.reset_demo(body.household)
+    store.emit(body.household, "demo", {"step": "board", "source": None, "scene": "TV"})
+    return {"ok": True, **out}
+
+
 class PrompterIn(BaseModel):
     household: str = Field(min_length=4, max_length=12)
     cmd: str = Field(min_length=1, max_length=20)      # play pause reset next prev goto state

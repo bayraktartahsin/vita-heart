@@ -53,3 +53,34 @@ def test_a_scene_that_is_not_one_of_the_three_is_refused(ddb):
     c = client(ddb)
     assert c.post("/demo", json={"household": "AHMET1", "step": "scene",
                                  "scene": "TERMINAL"}).status_code == 422
+
+
+def test_start_again_clears_the_day_and_sends_the_television_home(ddb):
+    c = client(ddb)
+    c.post("/checkin", json={"household": "AHMET1"})
+    board = c.get("/board", params={"household": "AHMET1"}).json()
+    assert board["checkedInToday"] is True
+    due = [d for d in board["dueDoses"] if not d["unscheduled"]]
+    if due:
+        c.post("/meds/confirm", json={"household": "AHMET1", "dose": due[0]["id"]})
+    c.post("/session/start", json={"household": "AHMET1", "source": "recorded"})
+
+    cursor = c.get("/events", params={"household": "AHMET1", "wait": 0}).json()["cursor"]
+    r = c.post("/demo/reset", json={"household": "AHMET1"})
+    assert r.status_code == 200 and r.json()["ok"] is True
+
+    after = c.get("/board", params={"household": "AHMET1"}).json()
+    assert after["checkedInToday"] is False
+    assert not [d for d in after["dueDoses"] if d["confirmed"]]
+    assert c.get("/session/live", params={"household": "AHMET1"}).json()["live"] is None
+    steps = [e["data"] for e in c.get("/events", params={"household": "AHMET1", "since": cursor, "wait": 0}).json()["events"]
+             if e["kind"] == "demo"]
+    assert steps and steps[-1]["step"] == "board"
+
+
+def test_start_again_keeps_the_medicines(ddb):
+    # the labels cost a model call to rebuild; they are never what goes wrong in a take
+    c = client(ddb)
+    before = c.get("/meds", params={"household": "AHMET1"}).json()["meds"]
+    c.post("/demo/reset", json={"household": "AHMET1"})
+    assert c.get("/meds", params={"household": "AHMET1"}).json()["meds"] == before

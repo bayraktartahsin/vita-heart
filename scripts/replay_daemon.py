@@ -13,10 +13,14 @@ one on screen for the whole time it plays.
 from __future__ import annotations
 
 import argparse
+import atexit
 import csv
 import math
+import os
 import sys
+import tempfile
 import time
+from pathlib import Path
 
 import httpx
 
@@ -51,6 +55,21 @@ def main() -> None:
     ap.add_argument("--api", default=API)
     ap.add_argument("--file")
     a = ap.parse_args()
+    # One daemon, or none. Two of these feed the same session from different points in
+    # the trace, and the television draws the two interleaved as a violent zigzag between
+    # two smooth curves — which looks like a failing heart, not a failing script.
+    lock = Path(tempfile.gettempdir()) / "vitaheart-replay.pid"
+    if lock.exists():
+        try:
+            os.kill(int(lock.read_text().strip()), 0)
+        except (OSError, ValueError):
+            lock.unlink(missing_ok=True)          # a stale lock from a killed run
+        else:
+            print(f"another replay daemon is already running (pid {lock.read_text().strip()}); "
+                  f"this one is stopping", flush=True)
+            return
+    lock.write_text(str(os.getpid()))
+    atexit.register(lambda: lock.unlink(missing_ok=True))
     print(f"replay daemon watching {a.household}: a recorded session will be fed automatically", flush=True)
     served: set[str] = set()
     while True:

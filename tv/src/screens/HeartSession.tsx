@@ -2,6 +2,7 @@ import React, {useEffect, useRef, useState} from 'react';
 import {StyleSheet, Text, View} from 'react-native';
 import {BigButton} from '../components/BigButton';
 import {Card, Eyebrow} from '../components/Card';
+import {BeatingEyebrow, BeatingNumber, PulseRings} from '../components/Beat';
 import {EcgSession} from '../components/Ecg';
 import {Icon} from '../components/Icon';
 import {s, color, type} from '../design/tokens';
@@ -70,8 +71,15 @@ export function HeartSession({state, onTick, latestBpm, source, coachLine, onFin
     <View style={styles.wrap} testID="heart-session">
       <View style={styles.stage}>
         <Card tint="heart" style={styles.now}>
-          <Eyebrow icon="heart">Right now</Eyebrow>
-          <Text style={styles.bpm} testID="bpm">{latestBpm ?? '—'}</Text>
+          <BeatingEyebrow bpm={latestBpm}>Right now</BeatingEyebrow>
+          <View style={styles.dial}>
+            <PulseRings bpm={latestBpm} size={s(248)} />
+            {/* three digits arrive as soon as the work blocks start: the ceiling here is 103 */}
+            <BeatingNumber bpm={latestBpm} testID="bpm"
+              style={[styles.bpm, String(latestBpm ?? '').length > 2 ? styles.bpmWide : null]}>
+              {latestBpm ?? '—'}
+            </BeatingNumber>
+          </View>
           <Text style={styles.unit}>BEATS PER MINUTE</Text>
           <View style={[styles.src, latestBpm === null ? styles.srcWaiting : null]}>
             <View style={styles.srcDot} />
@@ -136,15 +144,19 @@ export function HeartSession({state, onTick, latestBpm, source, coachLine, onFin
 const styles = StyleSheet.create({
   wrap: {flex: 1, gap: s(22)},
   stage: {flex: 1, flexDirection: 'row', gap: s(26)},
-  now: {flex: 0.95, justifyContent: 'center'},
-  bpm: {fontFamily: 'serif', fontSize: type.hero, lineHeight: s(250), color: color.heart, letterSpacing: s(-14)},
-  unit: {fontSize: s(30), letterSpacing: s(2), color: color.dim, fontWeight: '600', marginTop: s(6)},
+  now: {flex: 0.95, justifyContent: 'center', alignItems: 'center'},
+  // the ring sets the height; the number is centred inside it and never reaches the eyebrow
+  dial: {height: s(262), width: s(262), alignItems: 'center', justifyContent: 'center', marginTop: s(10)},
+  bpm: {fontFamily: 'serif', fontSize: s(158), lineHeight: s(180), color: color.heart,
+    letterSpacing: s(-6), textAlign: 'center'},
+  bpmWide: {fontSize: s(116), lineHeight: s(140), letterSpacing: s(-3)},
+  unit: {fontSize: s(26), letterSpacing: s(4), color: color.dim, fontWeight: '700', marginTop: s(10)},
   src: {flexDirection: 'row', alignItems: 'center', gap: s(14), paddingVertical: s(16), paddingHorizontal: s(26), borderRadius: s(999),
-    backgroundColor: color.heartSoft, borderWidth: 1, borderColor: color.heartEdge, alignSelf: 'flex-start', marginTop: s(22)},
+    backgroundColor: color.heartSoft, borderWidth: 1, borderColor: color.heartEdge, marginTop: s(18)},
   srcWaiting: {backgroundColor: color.panel2, borderColor: color.hair},
   srcDot: {width: s(12), height: s(12), borderRadius: s(6), backgroundColor: color.heart},
   srcText: {fontSize: s(26), fontWeight: '600', color: color.heart},
-  zone: {marginTop: s(34)},
+  zone: {marginTop: s(24), alignSelf: 'stretch'},
   zoneBar: {height: s(22), borderRadius: s(12), backgroundColor: color.panel2, overflow: 'visible'},
   zoneIn: {position: 'absolute', left: '34%', width: '32%', top: s(0), bottom: s(0), backgroundColor: 'rgba(121,201,139,0.6)', borderRadius: s(12)},
   zoneMe: {position: 'absolute', top: s(-9), width: s(6), height: s(40), borderRadius: s(6), backgroundColor: '#FFFFFF'},

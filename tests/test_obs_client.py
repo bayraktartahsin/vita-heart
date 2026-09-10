@@ -8,6 +8,7 @@ says to it.
 import asyncio
 import base64
 import hashlib
+import io
 import json
 import sys
 from pathlib import Path
@@ -29,6 +30,21 @@ WINDOWS = [{"itemName": "[Google Chrome] Vita Heart · Family", "itemValue": 804
 
 SCENES = {"Vega": "macOS Screen Capture", "Vita heart": "macOS Screen Capture 2",
           "Alexa": "macOS Screen Capture 3"}
+
+# What the simulator's window looks like to OBS: a light macOS title bar, the 16:9
+# television, and the remote panel beside it that nobody can click.
+TITLE_H, SCREEN_W, IMG = 47, 1592, (1920, 940)
+SOURCE_W, SOURCE_H = 1160.0, 568.0
+
+
+def fake_window_png() -> str:
+    from PIL import Image
+    im = Image.new("RGB", IMG, (233, 233, 235))                       # title bar
+    im.paste(Image.new("RGB", (SCREEN_W, IMG[1] - TITLE_H), (10, 13, 18)), (0, TITLE_H))
+    im.paste(Image.new("RGB", (IMG[0] - SCREEN_W, IMG[1] - TITLE_H), (60, 60, 60)), (SCREEN_W, TITLE_H))
+    buf = io.BytesIO()
+    im.save(buf, format="PNG")
+    return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
 
 
 class FakeObs:
@@ -65,6 +81,11 @@ class FakeObs:
                                     "inputKind": "screen_capture"}]}
         if kind == "GetInputPropertiesListPropertyItems":
             return {"propertyItems": WINDOWS}
+        if kind == "GetSceneItemTransform":
+            return {"sceneItemTransform": {"sourceWidth": SOURCE_W, "sourceHeight": SOURCE_H,
+                                           "cropLeft": 0, "cropTop": 0, "cropRight": 0, "cropBottom": 0}}
+        if kind == "GetSourceScreenshot":
+            return {"imageData": fake_window_png()}
         return {}
 
 
@@ -94,12 +115,22 @@ async def test_it_authenticates_and_aims_every_scene_at_the_right_window(fake):
     # the prompter must never be captured: it is what the founder is reading
     assert 4242 not in aimed.values()
 
-    fits = [data for kind, data in fake.seen if kind == "SetSceneItemTransform"]
+    fits = {f["sceneName"]: f["sceneItemTransform"]
+            for kind, f in fake.seen if kind == "SetSceneItemTransform"}
     assert len(fits) == 3
-    for f in fits:
-        t = f["sceneItemTransform"]
-        assert (t["boundsWidth"], t["boundsHeight"]) == (1920, 1080)
-        assert t["boundsType"] == "OBS_BOUNDS_SCALE_INNER"
+    for tr in fits.values():
+        assert (tr["boundsWidth"], tr["boundsHeight"]) == (1920, 1080)
+        assert tr["boundsType"] == "OBS_BOUNDS_SCALE_INNER"
+    # the television is cropped to the screen: the title bar and the remote are gone,
+    # measured off the frame rather than hard-coded
+    tv = fits["Vega"]
+    assert (tv["cropTop"], tv["cropLeft"], tv["cropBottom"]) == (28, 0, 0)
+    assert tv["cropRight"] == 198
+    kept_w = SOURCE_W - tv["cropLeft"] - tv["cropRight"]
+    kept_h = SOURCE_H - tv["cropTop"] - tv["cropBottom"]
+    assert abs(kept_w / kept_h - 16 / 9) < 0.01, "what is left must be a 16:9 television"
+    # the browser windows are never cropped: their address bar is the proof it runs on AWS
+    assert fits["Vita heart"]["cropTop"] == 0 and fits["Alexa"]["cropTop"] == 0
 
 
 @pytest.mark.asyncio

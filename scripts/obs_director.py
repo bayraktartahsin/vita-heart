@@ -21,6 +21,7 @@ import asyncio
 import base64
 import contextlib
 import hashlib
+import io
 import json
 import sys
 from pathlib import Path
@@ -106,6 +107,44 @@ def _pick_scenes(names: list[str]) -> dict[str, str]:
     return chosen
 
 
+async def screen_crop(obs: Obs, source: str, source_w: float, source_h: float) -> dict | None:
+    """Find the television inside the simulator's window.
+
+    The Vega window is a macOS title bar, the screen, and a remote nobody can click.
+    Cropping to the screen is the difference between the ten-foot design filling the
+    frame and it occupying two thirds of it next to a picture of a remote control.
+    Measured rather than hard-coded, because the window can be any size.
+    """
+    try:
+        from PIL import Image
+    except ImportError:
+        return None
+    r = await obs.call("GetSourceScreenshot", {"sourceName": source, "imageFormat": "png",
+                                               "imageWidth": 1920})
+    im = Image.open(io.BytesIO(base64.b64decode(r["imageData"].split(",", 1)[-1]))).convert("RGB")
+    W, H = im.size
+    px = im.load()
+    dark = lambda p: sum(p) < 170           # noqa: E731  the app ground; the title bar is light
+    deep = lambda p: sum(p) < 110           # noqa: E731  darker than the remote panel beside it
+    rows = [sum(1 for x in range(0, W, 4) if dark(px[x, y])) / (W / 4) for y in range(H)]
+    top = next((y for y, sh in enumerate(rows) if sh > 0.5), None)
+    if top is None:
+        return None
+    cols = [sum(1 for y in range(top, H, 4) if deep(px[x, y])) / ((H - top) / 4) for x in range(W)]
+    wide = [x for x, sh in enumerate(cols) if sh > 0.8]
+    if not wide:
+        return None
+    left, right = wide[0], wide[-1]
+    width = right - left + 1
+    height = H - top
+    # Only trust it if what was found looks like a television: 16:9, and most of the window.
+    if not (1.70 < width / height < 1.86) or width < W * 0.5:
+        return None
+    k = source_w / W                        # the screenshot was scaled; crop is in source pixels
+    return {"cropLeft": round(left * k), "cropTop": round(top * (source_h / H)),
+            "cropRight": round((W - right - 1) * k), "cropBottom": 0}
+
+
 async def aim(obs: Obs, quiet: bool = False) -> dict[str, str]:
     """Point every scene at its window and make it fill the frame."""
     names = [s["sceneName"] for s in (await obs.call("GetSceneList"))["scenes"]]
@@ -139,13 +178,22 @@ async def aim(obs: Obs, quiet: bool = False) -> dict[str, str]:
             continue
         await obs.call("SetInputSettings", {"inputName": source, "overlay": True,
                                             "inputSettings": {"type": 1, "window": match["itemValue"]}})
-        # Fit to screen, the same thing Command-F does, so nothing is cropped or letterboxed.
+        transform = {"boundsType": "OBS_BOUNDS_SCALE_INNER", "boundsAlignment": 0,
+                     "boundsWidth": CANVAS[0], "boundsHeight": CANVAS[1],
+                     "alignment": 0, "positionX": CANVAS[0] / 2, "positionY": CANVAS[1] / 2,
+                     "cropLeft": 0, "cropTop": 0, "cropRight": 0, "cropBottom": 0}
+        if role == "TV":
+            cur = (await obs.call("GetSceneItemTransform", {
+                "sceneName": scene, "sceneItemId": capture["sceneItemId"]}))["sceneItemTransform"]
+            crop = await screen_crop(obs, source, cur["sourceWidth"], cur["sourceHeight"])
+            if crop:
+                transform.update(crop)
+            elif not quiet:
+                print(f"  {role:<6} could not find the screen in the window; showing all of it")
+        # Fit to screen, the same thing Command-F does, so nothing is letterboxed.
         await obs.call("SetSceneItemTransform", {
             "sceneName": scene, "sceneItemId": capture["sceneItemId"],
-            "sceneItemTransform": {"boundsType": "OBS_BOUNDS_SCALE_INNER", "boundsAlignment": 0,
-                                   "boundsWidth": CANVAS[0], "boundsHeight": CANVAS[1],
-                                   "alignment": 0, "positionX": CANVAS[0] / 2,
-                                   "positionY": CANVAS[1] / 2}})
+            "sceneItemTransform": transform})
         if not quiet:
             print(f"  {role:<6} '{scene}' → {match['itemName']}")
     return scenes

@@ -1,5 +1,6 @@
 import React from 'react';
 import {act, fireEvent, render, screen, waitFor} from '@testing-library/react-native';
+import {StyleSheet} from 'react-native';
 import {App} from '../src/App';
 
 const board = {
@@ -120,6 +121,16 @@ describe('Vita Heart TV', () => {
     });
     await waitFor(() => expect(screen.getByTestId('bpm').props.children).toBe(88));
     expect(screen.getByText('live from your Apple Watch')).toBeTruthy();
+    // Two digits fit the ring at full size.
+    const twoDigit = StyleSheet.flatten(screen.getByTestId('bpm').props.style);
+    // Three arrive as soon as the work blocks start — the gentle ceiling here is over 100 —
+    // and at full size they run outside the ring.
+    await act(async () => {
+      poll!({events: [{ts: '2', kind: 'hr', data: {session: 'sess123456', bpm: 118}}], cursor: '2'});
+    });
+    await waitFor(() => expect(screen.getByTestId('bpm').props.children).toBe(118));
+    const threeDigit = StyleSheet.flatten(screen.getByTestId('bpm').props.style);
+    expect(threeDigit.fontSize).toBeLessThan(twoDigit.fontSize);
     // Two seconds of the engine.
     await act(async () => {
       jest.advanceTimersByTime(2000);

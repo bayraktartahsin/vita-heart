@@ -30,3 +30,15 @@ def test_hr_out_of_range_is_rejected(ddb):
     c = client(ddb)
     sid = c.post("/session/start", json={"household": "AHMET1"}).json()["id"]
     assert c.post("/session/hr", json={"household": "AHMET1", "session": sid, "bpm": 300}).status_code == 422
+
+
+def test_starting_twice_leaves_exactly_one_live_session(ddb):
+    c = client(ddb)
+    first = c.post("/session/start", json={"household": "AHMET1", "source": "recorded"}).json()["id"]
+    second = c.post("/session/start", json={"household": "AHMET1", "source": "recorded"}).json()["id"]
+    assert first != second
+    live = c.get("/session/live", params={"household": "AHMET1"}).json()["live"]
+    # the one the television is now showing, whatever the ids happen to sort like
+    assert live["id"] == second
+    # and heart rate for the abandoned one is refused, rather than vanishing into it
+    assert c.post("/session/hr", json={"household": "AHMET1", "session": first, "bpm": 80}).status_code == 409
