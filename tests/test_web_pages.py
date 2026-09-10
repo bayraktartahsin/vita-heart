@@ -44,3 +44,14 @@ def test_the_surfaces_do_not_wait_on_a_timer_or_a_microphone():
         "the Alexa page must answer the prompter's sentence without the microphone"
     assert "localStorage.getItem('token')" in alexa, \
         "the token must survive a reopened window, or a consent page opens mid-take"
+
+
+def test_the_alexa_transcript_is_wiped_when_a_take_starts():
+    """The setup rehearses this surface for real, and its answer stayed on the page.
+
+    On camera it sat above the question being asked, which reads as the same question
+    answered twice — the thing the founder saw and reported.
+    """
+    page = (Path(__file__).resolve().parent.parent / "api" / "vitaheart" / "web"
+            / "alexa-sim.html").read_text(encoding="utf-8")
+    assert "d.step === 'record'" in page and "$('log').innerHTML = ''" in page

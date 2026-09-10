@@ -70,7 +70,9 @@ const API = location.origin, HH = new URLSearchParams(location.search).get('hous
 const ACT = S.actSeconds || 1.8;
 const mmss = t => Math.floor(t/60) + ':' + String(Math.floor(Math.max(0,t))%60).padStart(2,'0');
 const words = s => s.split(/\s+/).length;
-const speakSeconds = b => words(b.say)/150*60;
+// 130 words a minute is how a prompter is actually read; 150 was optimistic and the
+// grace period underneath had to absorb the difference on every single line.
+const speakSeconds = b => words(b.say)/130*60;
 
 /* Each block plays as up to three phases. The prompter is a small state machine over
    the flattened list, so at any instant there is exactly one instruction on screen:
@@ -83,6 +85,16 @@ B.forEach((b, i) => {
   if (b.hold) PHASES.push({k:'hold', b, i, secs: b.hold});
 });
 PHASES.push({k:'end', b: B[B.length-1], i: B.length-1, secs: 2});
+
+// Expected time at the start of every phase. A take that runs long is only discoverable
+// at the end unless the pace is measured against this while it is still fixable: the
+// first one came in at 3:52 against a rule of three minutes.
+const GRACE = 1.2;
+const EXPECT = [];
+let acc = 0;
+for (const ph of PHASES) { EXPECT.push(acc); acc += ph.secs + (ph.k === 'say' ? GRACE : 0); }
+const EXPECT_TOTAL = acc;
+const LIMIT = 180;
 
 let p = 0, running = false, t0 = 0, elapsed = 0, phaseStart = 0, micOn = false, rec = null;
 let watchReady = localStorage.getItem('watchReady') === '1';
@@ -133,9 +145,19 @@ function draw(){
     : nx.k === 'hold' ? 'Next: silence for ' + nx.secs + ' seconds' : 'Next: stop the recording')
     : 'Last one.';
   $('bar').firstElementChild.style.width = Math.min(100, (elapsed / S.target) * 100) + '%';
-  const over = elapsed - S.target;
-  $('left').textContent = over > 0 ? '+' + mmss(over) + ' over' : 'of ' + mmss(S.target);
-  $('left').style.color = over > 0 ? '#FF6F61' : '';
+  // Pace, projected onto the finish. Judges are not required to watch past three minutes.
+  // expected time so far: everything before this phase, plus progress inside it, capped
+  // at what this phase was budgeted — otherwise overrunning a phase flatters the pace
+  const budget = PHASES[p].secs + (PHASES[p].k === 'say' ? GRACE : 0);
+  const done = EXPECT[p] + Math.min(elapsed - phaseStart, budget);
+  const pace = done > 12 ? elapsed / done : 1;
+  const finish = EXPECT_TOTAL * pace;
+  const tight = finish > LIMIT - 8;
+  $('left').textContent = elapsed > 6
+    ? (tight ? 'FASTER · ends ' : 'ends ') + mmss(finish)
+    : 'of ' + mmss(S.target);
+  $('left').style.color = finish >= LIMIT ? '#FF5A50' : tight ? '#FFB347' : '';
+  $('bar').firstElementChild.style.background = finish >= LIMIT ? '#FF5A50' : '';
 }
 
 function advance(){
@@ -177,7 +199,7 @@ function loop(){
     // timed phases run themselves; a spoken line waits for the voice, then for a grace period,
     // so a missed word never stalls the take.
     if (ph.k === 'do' || ph.k === 'hold') { if (gone >= ph.secs) advance(); else draw(); }
-    else if (ph.k === 'say') { if (gone >= ph.secs + 4.5) advance(); else draw(); }
+    else if (ph.k === 'say') { if (gone >= ph.secs + 1.2) advance(); else draw(); }
   }
 }
 

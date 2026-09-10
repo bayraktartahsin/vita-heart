@@ -102,7 +102,18 @@
         const j = await r.json(); cursor = j.cursor;
         for (const e of j.events) {
           const d = e.data || {};
-          if (e.kind !== 'demo' || d.step !== 'listen') continue;
+          if (e.kind !== 'demo') continue;
+          // A take starts with an empty transcript. The setup rehearses this surface for
+          // real — that is the only way to know it answers — and its answer was still
+          // sitting on the page when the camera rolled, above the question being asked,
+          // looking exactly like the same question answered twice.
+          if (d.step === 'record' || d.step === 'board') {
+            $('log').innerHTML = '';
+            answered.clear();
+            lastAsk = {text: '', at: 0};
+            continue;
+          }
+          if (d.step !== 'listen') continue;
           // The sentence the founder is reading aloud is put to the model directly.
           // Speech recognition in a window that is behind two others, with no focus and
           // no microphone permission of its own, is not something a take can rest on:
