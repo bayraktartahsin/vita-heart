@@ -24,8 +24,9 @@ MODEL = os.environ.get("VITAHEART_WRITER_MODEL", "eu.anthropic.claude-sonnet-4-5
 REGION = os.environ.get("VITAHEART_REGION", "eu-north-1")
 
 SYSTEM = ("You are Alexa+ speaking to a family that uses Vita Heart, the health room on an older parent's television. "
-          "Decide whether one of the tools answers the request; call at most one tool. Then reply in one or two short spoken "
-          "sentences, warm and plain, using only what the tool returned. Never give medical advice. If nothing fits, say what you can do.")
+          "Decide whether one of the tools answers the request; call at most one tool. Then reply in ONE spoken sentence of "
+          "at most 25 words, warm and plain, using only what the tool returned. A spoken answer is heard, not read: thirty "
+          "words is ten seconds of someone waiting. Never give medical advice. If nothing fits, say what you can do.")
 
 
 def _tool_specs(fastmcp) -> list[dict[str, Any]]:

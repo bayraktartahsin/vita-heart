@@ -83,7 +83,7 @@ export function Family({api, onBack, refreshKey}: Props) {
           {trace.length === 0 ? <Text style={styles.p}>Nothing yet. Photograph the boxes from the family's phone.</Text> : null}
           {trace.slice(0, 7).map((t, i) => (
             <View key={i} style={[styles.step, i === 0 ? styles.stepFirst : null]}>
-              <Text style={[styles.agent, {color: AGENT_TINT[t.agent] ?? color.warm2}]}>{t.agent.toUpperCase()}</Text>
+              <Text numberOfLines={1} style={[styles.agent, {color: AGENT_TINT[t.agent] ?? color.warm2}]}>{t.agent.toUpperCase()}</Text>
               <Text style={styles.stepText}>{t.said ?? t.tool}</Text>
             </View>
           ))}
@@ -114,7 +114,8 @@ const styles = StyleSheet.create({
   traceList: {flex: 1},
   step: {flexDirection: 'row', gap: s(18), paddingVertical: s(13), borderTopWidth: 1, borderTopColor: color.hair},
   stepFirst: {borderTopWidth: 0, paddingTop: s(4)},
-  agent: {width: s(118), fontSize: s(18), letterSpacing: s(1.6), fontWeight: '700', lineHeight: s(23)},
+  // WATCHMAN did not fit and broke across two lines, on camera
+  agent: {width: s(152), fontSize: s(18), letterSpacing: s(1), fontWeight: '700', lineHeight: s(23)},
   stepText: {flex: 1, fontSize: s(23), lineHeight: s(31), color: color.dim},
   foot: {marginTop: s(14)},
   back: {position: 'absolute', left: s(0), bottom: s(-2)},

@@ -84,3 +84,29 @@ def test_start_again_keeps_the_medicines(ddb):
     before = c.get("/meds", params={"household": "AHMET1"}).json()["meds"]
     c.post("/demo/reset", json={"household": "AHMET1"})
     assert c.get("/meds", params={"household": "AHMET1"}).json()["meds"] == before
+
+
+def test_stopping_the_session_rewrites_tonights_summary(ddb, monkeypatch):
+    """The summary is a snapshot, and a stale one contradicts the screen beside it.
+
+    On camera it said no dose was confirmed and no session was done, seconds after the
+    judges watched both — and the narration was pointing straight at it.
+    """
+    from vitaheart.night import watch
+    calls: list[str] = []
+    monkeypatch.setattr(watch, "run_for",
+                        lambda hh, notify=True: calls.append(hh) or {"ok": True})
+    c = client(ddb)
+    c.post("/demo", json={"household": "AHMET1", "step": "meds"})
+    assert calls == [], "only stopping the session should rewrite it"
+    r = c.post("/demo", json={"household": "AHMET1", "step": "stop"})
+    assert r.status_code == 200
+    assert calls == ["AHMET1"]
+
+
+def test_a_failing_summary_refresh_never_breaks_the_take(ddb, monkeypatch):
+    from vitaheart.night import watch
+    monkeypatch.setattr(watch, "run_for",
+                        lambda hh, notify=True: (_ for _ in ()).throw(RuntimeError("bedrock down")))
+    c = client(ddb)
+    assert c.post("/demo", json={"household": "AHMET1", "step": "stop"}).status_code == 200

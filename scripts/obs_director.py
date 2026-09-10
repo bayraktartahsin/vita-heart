@@ -185,6 +185,9 @@ async def ensure_audio(obs: Obs, scenes: dict[str, str], quiet: bool = False) ->
                 await obs.call("CreateSceneItem", {"sceneName": scene, "sourceName": AUDIO_SOURCE})
     with contextlib.suppress(RuntimeError):
         await obs.call("SetInputMute", {"inputName": AUDIO_SOURCE, "inputMuted": False})
+    with contextlib.suppress(RuntimeError):
+        # the synthesized voice arrives at full scale and was peaking at 0 dB
+        await obs.call("SetInputVolume", {"inputName": AUDIO_SOURCE, "inputVolumeDb": -4.0})
 
     # The narration is the one track that cannot be re-recorded later, and an AirPods
     # mic ran into the ceiling at 0 dB on a quiet three-second test: clipped speech is

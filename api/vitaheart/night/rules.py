@@ -121,7 +121,18 @@ def session(summary: dict[str, Any] | None) -> list[Signal]:
         return [Signal("session", "No seated session today.", {}, weight=1)]
     mins = summary.get("minutesActive")
     share = summary.get("inRangeShare")
-    txt = f"A seated session of {mins} minutes"
+    # "A seated session of 0.2 minutes" is what a machine says. Under a minute, say
+    # seconds; a whole number of minutes should not carry a decimal point either.
+    try:
+        m = float(mins)
+    except (TypeError, ValueError):
+        m = 0.0
+    if m < 1:
+        txt = f"A seated session of {max(1, round(m * 60))} seconds"
+    elif abs(m - round(m)) < 0.05:
+        txt = f"A seated session of {round(m)} minutes"
+    else:
+        txt = f"A seated session of {m:.1f} minutes"
     if share is not None:
         txt += f", heart rate in the gentle range {int(float(share) * 100)}% of the time"
     txt += "."

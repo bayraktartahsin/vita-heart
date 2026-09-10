@@ -108,6 +108,10 @@ export const App = ({apiBaseUrl = API_BASE_URL, household: initialHousehold}: {a
     }
     if (e.kind === 'hr' && sessionRef.current && e.data.session === sessionRef.current.id) {
       setLatestBpm(Number(e.data.bpm));
+      // The coach line otherwise only changes when a block ends, two minutes in, so a
+      // screen already reading "Watch connected" next to a live number went on telling
+      // him to open the Watch and press Start.
+      setCoachLine(prev => (prev.startsWith('Open Vita Heart') ? 'The wrist is connected. Sit comfortably — we begin gently.' : prev));
     }
     if (e.kind === 'demo') {
       demo(String(e.data.step ?? ''), e.data.source as SessionSource | undefined);

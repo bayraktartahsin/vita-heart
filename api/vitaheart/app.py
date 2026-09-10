@@ -10,8 +10,8 @@ Phase 1 routes:
 """
 from __future__ import annotations
 
+import logging
 import time
-
 from pathlib import Path
 
 from fastapi import FastAPI, Header, HTTPException, Query, Request
@@ -573,6 +573,16 @@ def demo_step(body: DemoIn) -> dict:
     store.emit(body.household, "demo",
                {"step": body.step, "source": body.source, "scene": body.scene,
                 "utterance": body.utterance})
+    if body.step == "stop":
+        # Rewrite tonight's summary now that the day has happened. It is a snapshot, and
+        # the stale one said no dose was confirmed and no session was done — on screen,
+        # seconds after the judges watched both. The narration then disagreed with the
+        # television it was pointing at. The event is already out, so nothing waits.
+        try:
+            from .night import watch
+            watch.run_for(body.household, notify=False)
+        except Exception:
+            logging.getLogger("vitaheart.demo").exception("night watch refresh failed")
     return {"ok": True, "step": body.step, "scene": body.scene}
 
 

@@ -59,3 +59,12 @@ def test_no_banned_words_ever():
     text = " ".join(s.note for s in sig).lower()
     for w in ("alarm", "monitor ", "detect", "diagnos"):
         assert w not in text
+
+
+def test_a_short_session_is_described_in_seconds():
+    """"A seated session of 0.2 minutes" is what a machine says, and it was on camera."""
+    from vitaheart.night import rules
+    assert "12 seconds" in rules.session({"minutesActive": 0.2})[0].note
+    assert "10 minutes" in rules.session({"minutesActive": 10.0})[0].note
+    assert "4.5 minutes" in rules.session({"minutesActive": 4.5})[0].note
+    assert "No seated session" in rules.session(None)[0].note

@@ -134,7 +134,7 @@ function draw(){
   } else if (ph.k === 'hold') {
     st.innerHTML = ring(remain, ph.secs) +
       `<div class="doList"><b>Say nothing. Let it happen.</b></div>` +
-      `<div class="hint">${ph.b.scene === 'ALEXA' ? 'Alexa is answering' : ph.b.scene === 'WRIST' ? 'hold the wrist still' : 'the screen is catching up'}</div>`;
+      `<div class="hint">${ph.b.scene === 'ALEXA' ? 'wait — this moves on the moment Alexa stops talking' : ph.b.scene === 'WRIST' ? 'hold the wrist still' : 'the screen is catching up'}</div>`;
   } else {
     st.innerHTML = `<div class="doList"><b>Two seconds of silence, then stop the recording.</b></div>
       <div class="hint">${mmss(elapsed)} · target 2:45</div>`;
@@ -198,7 +198,13 @@ function loop(){
     const ph = PHASES[p], gone = elapsed - phaseStart;
     // timed phases run themselves; a spoken line waits for the voice, then for a grace period,
     // so a missed word never stalls the take.
-    if (ph.k === 'do' || ph.k === 'hold') { if (gone >= ph.secs) advance(); else draw(); }
+    if (ph.k === 'hold' && ph.b.scene === 'ALEXA') {
+      // Wait for the voice, not for the clock: the answer's length is not knowable in
+      // advance. The budget is still a ceiling, so a silent surface cannot stall a take.
+      const spoke = alexaSpoke > phaseStart;
+      if ((spoke && gone >= 0.8) || gone >= ph.secs) advance(); else draw();
+    }
+    else if (ph.k === 'do' || ph.k === 'hold') { if (gone >= ph.secs) advance(); else draw(); }
     else if (ph.k === 'say') { if (gone >= ph.secs + 1.2) advance(); else draw(); }
   }
 }
@@ -276,7 +282,7 @@ function state(){
     body: JSON.stringify({household: HH, cmd: 'state', index: PHASES[p].i, elapsed: Math.round(elapsed), running})}).catch(()=>{});
 }
 // ---- is the television listening? ----------------------------------------------
-let tvSeen = 0;
+let tvSeen = 0, alexaSpoke = -1;
 function tvLight(){
   const el = $('tv'), age = (Date.now() - tvSeen) / 1000;
   const ok = tvSeen && age < 46;                 // it beats every 20 s
@@ -297,6 +303,7 @@ setInterval(tvLight, 1000);
         // the television's heartbeat. It is the same channel the demo steps travel on,
         // so a beat proves the steps will land — not that the app is merely on screen.
         if (c === 'alive' || c === 'device') { tvSeen = Date.now(); tvLight(); continue; }
+        if (c === 'spoke') { alexaSpoke = elapsed; continue; }
         if (c === 'play' && !running) begin();
         else if (c === 'pause') pause();
         else if (c === 'reset') reset();

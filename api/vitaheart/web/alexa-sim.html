@@ -46,6 +46,7 @@
 </main>
 <script>
   const api = location.origin; const $ = id => document.getElementById(id);
+  const hh = () => new URLSearchParams(location.search).get('household') || 'AHMET1';
   const CLIENT = 'vita-heart-alexa'; const REDIRECT = api + '/alexa-sim';
   const b64url = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
   async function pkceStart() {
@@ -75,7 +76,21 @@
     // A turn that failed used to write the word "undefined" into the transcript, on camera.
     const speech = j.speech || j.detail || 'No answer came back. Say the sentence again.';
     say('alexa', `${j.tool ? `<div class="tool">MCP · ${j.tool}${j.ms ? ` · ${j.ms} ms` : ''}</div>` : ''}${speech}${j.card ? `<div class="card">${j.card}</div>` : ''}`);
-    if ('speechSynthesis' in window && j.speech) { const u = new SpeechSynthesisUtterance(j.speech); u.lang = 'en-US'; speechSynthesis.speak(u); }
+    if ('speechSynthesis' in window && j.speech) {
+      const u = new SpeechSynthesisUtterance(j.speech);
+      u.lang = 'en-US'; u.rate = 1.1;
+      // Tell the prompter when the voice stops. Without this the hold is a guess, and it
+      // guessed five seconds against a ten-second answer: the founder was asked to read
+      // the next line while Alexa was still talking, twice.
+      const done = () => fetch(api + '/prompter', {method: 'POST',
+        headers: {'content-type': 'application/json'},
+        body: JSON.stringify({household: hh(), cmd: 'spoke'})}).catch(() => {});
+      u.onend = done; u.onerror = done;
+      speechSynthesis.speak(u);
+    } else {
+      fetch(api + '/prompter', {method: 'POST', headers: {'content-type': 'application/json'},
+        body: JSON.stringify({household: hh(), cmd: 'spoke'})}).catch(() => {});
+    }
   }
   $('typed').addEventListener('submit', e => { e.preventDefault(); const t = $('text').value.trim(); if (t) { $('text').value = ''; turn(t); } });
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
