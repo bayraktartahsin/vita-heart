@@ -191,6 +191,21 @@ async def ensure_audio(obs: Obs, scenes: dict[str, str], quiet: bool = False) ->
     # not fixable in an edit. A little headroom and a limiter, which is what anyone
     # recording a voice would do, and no gate — a gate that mistimes eats a first word.
     for name in ("Mic/Aux",):
+        # Re-bind the device. OBS holds a binding to whichever input it opened, and that
+        # binding goes stale — after a headset connects or disconnects, the source keeps
+        # reporting itself unmuted, at level, on every track, and delivers pure digital
+        # silence. Writing the device id away and back opens it again, which is the
+        # difference between a narrated video and a silent one.
+        with contextlib.suppress(RuntimeError):
+            chosen = (await obs.call("GetInputSettings",
+                                     {"inputName": name}))["inputSettings"].get("device_id", "default")
+            await obs.call("SetInputSettings", {"inputName": name, "overlay": True,
+                                                "inputSettings": {"device_id": "disabled"}})
+            await asyncio.sleep(0.4)
+            await obs.call("SetInputSettings", {"inputName": name, "overlay": True,
+                                                "inputSettings": {"device_id": chosen}})
+        with contextlib.suppress(RuntimeError):
+            await obs.call("SetInputMute", {"inputName": name, "inputMuted": False})
         with contextlib.suppress(RuntimeError):
             await obs.call("SetInputVolume", {"inputName": name, "inputVolumeDb": -6.0})
         have = {f["filterName"] for f in

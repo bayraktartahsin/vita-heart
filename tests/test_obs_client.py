@@ -53,8 +53,11 @@ class FakeObs:
         self.authenticated = False
         self.inputs: list[dict] = [{"inputName": n, "inputKind": "screen_capture"}
                                    for n in SCENES.values()]
+        self.inputs.append({"inputName": "Mic/Aux", "inputKind": "coreaudio_input_capture"})
         self.items: dict[str, list[str]] = {s: [SCENES[s]] for s in SCENES}
         self.filters: dict[str, list[dict]] = {}
+        self.settings: dict[str, dict] = {"Mic/Aux": {"device_id": "default"}}
+        self.writes: list[tuple[str, dict]] = []
 
     async def handler(self, ws):
         await ws.send(json.dumps({"op": 0, "d": {
@@ -87,6 +90,12 @@ class FakeObs:
             return {}
         if kind == "CreateSceneItem":
             self.items.setdefault(data["sceneName"], []).append(data["sourceName"])
+            return {}
+        if kind == "GetInputSettings":
+            return {"inputSettings": self.settings.get(data["inputName"], {})}
+        if kind == "SetInputSettings":
+            self.settings.setdefault(data["inputName"], {}).update(data["inputSettings"])
+            self.writes.append((data["inputName"], dict(data["inputSettings"])))
             return {}
         if kind == "GetSourceFilterList":
             return {"filters": list(self.filters.get(data["sourceName"], []))}
@@ -128,7 +137,8 @@ async def test_it_authenticates_and_aims_every_scene_at_the_right_window(fake):
     assert scenes == {"TV": "Vega", "FAMILY": "Vita heart", "ALEXA": "Alexa"}
 
     aimed = {data["inputName"]: data["inputSettings"]["window"]
-             for kind, data in fake.seen if kind == "SetInputSettings"}
+             for kind, data in fake.seen
+             if kind == "SetInputSettings" and "window" in data["inputSettings"]}
     assert aimed == {"macOS Screen Capture": 7305,          # the television
                      "macOS Screen Capture 2": 8041,        # the family page
                      "macOS Screen Capture 3": 9938}        # the Alexa surface
@@ -165,6 +175,11 @@ async def test_it_authenticates_and_aims_every_scene_at_the_right_window(fake):
     vols = {d["inputName"]: d["inputVolumeDb"] for k, d in fake.seen if k == "SetInputVolume"}
     assert vols.get("Mic/Aux") == -6.0, "the microphone needs headroom"
     assert any(f["filterKind"] == "limiter_filter" for f in fake.filters.get("Mic/Aux", []))
+
+    # OBS's binding to the input device goes stale — unmuted, at level, on every track,
+    # and delivering pure digital silence. Writing the device id away and back reopens it.
+    mic_writes = [s.get("device_id") for n, s in fake.writes if n == "Mic/Aux"]
+    assert mic_writes == ["disabled", "default"], f"expected a re-bind, got {mic_writes}"
 
 
 @pytest.mark.asyncio

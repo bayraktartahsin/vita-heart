@@ -73,15 +73,32 @@ def loudness(path: Path) -> tuple[float, float] | None:
     return vals["mean_volume"], vals.get("max_volume", vals["mean_volume"])
 
 
-async def _record_seconds(seconds: float) -> Path | None:
+async def _record_seconds(seconds: float) -> tuple[Path | None, str]:
+    """Record briefly, and say which microphone OBS was listening to."""
     from obs_director import Obs
     async with Obs() as obs:
+        mic = "unknown"
+        try:
+            chosen = (await obs.call("GetInputSettings",
+                                     {"inputName": "Mic/Aux"}))["inputSettings"].get("device_id", "default")
+            devices = (await obs.call("GetInputPropertiesListPropertyItems",
+                                      {"inputName": "Mic/Aux",
+                                       "propertyName": "device_id"}))["propertyItems"]
+            names = {d.get("itemValue"): d.get("itemName") for d in devices}
+            mic = names.get(chosen, chosen)
+            if chosen == "default":
+                # "Default" hides which device it actually is, and on this machine the
+                # built-in microphone reaches OBS as digital silence while the AirPods work.
+                airpods = [n for n in names.values() if n and "airpod" in n.lower()]
+                mic = f"Default ({'AirPods available' if airpods else 'no AirPods connected'})"
+        except Exception:
+            pass
         if (await obs.call("GetRecordStatus"))["outputActive"]:
-            return None
+            return None, mic
         await obs.call("StartRecord")
         await asyncio.sleep(seconds)
         out = await obs.call("StopRecord")
-        return Path(out["outputPath"]) if out.get("outputPath") else None
+        return (Path(out["outputPath"]) if out.get("outputPath") else None), mic
 
 
 def audio_check() -> None:
@@ -94,7 +111,7 @@ def audio_check() -> None:
     they are -91 dB and a noise floor.
     """
     try:
-        path = asyncio.run(_record_seconds(3.5))
+        path, mic = asyncio.run(_record_seconds(3.5))
     except Exception as exc:
         print(f"     (could not test the audio: {exc})")
         return
@@ -112,9 +129,11 @@ def audio_check() -> None:
         return
     mean, peak = got
     # a live microphone always has a noise floor; digital silence is about -91 dB
-    check("a microphone is reaching the recording", peak > -85.0,
-          f"peak {peak:.0f} dB, mean {mean:.0f} dB"
-          + ("" if peak > -85.0 else " — pick the input under OBS Settings > Audio"))
+    live = peak > -85.0
+    check("a microphone is reaching the recording", live,
+          f"{mic} · peak {peak:.0f} dB, mean {mean:.0f} dB" if live else
+          f"{mic} is delivering silence. Put the AirPods in and keep them in — the "
+          f"built-in microphone does not reach OBS on this machine.")
 
 
 def main() -> int:

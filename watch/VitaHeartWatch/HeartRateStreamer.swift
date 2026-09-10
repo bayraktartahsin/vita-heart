@@ -66,14 +66,21 @@ final class HeartRateStreamer: NSObject, ObservableObject {
                 let live = try? await self?.client.liveSession()
                 await MainActor.run {
                     guard let self else { return }
-                    if let live {
+                    // Only a session the television has labelled "watch". A recorded
+                    // session already has a trace being fed into it, and two feeders
+                    // are drawn interleaved as a violent zigzag between two smooth
+                    // curves; worse, the screen would be saying "a recorded session"
+                    // over a real heart. The label has to stay true.
+                    if let live, live.source == "watch" {
                         if self.tvSession != live.id {
                             self.tvSession = live.id
                             self.status = "Streaming to the television"
                         }
-                    } else if self.tvSession != nil {
-                        self.tvSession = nil
-                        self.status = "Waiting for the television…"
+                    } else {
+                        if self.tvSession != nil { self.tvSession = nil }
+                        self.status = live == nil
+                            ? "Waiting for the television…"
+                            : "The television is playing a recorded session"
                     }
                 }
                 try? await Task.sleep(nanoseconds: 3_000_000_000)
