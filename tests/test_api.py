@@ -71,3 +71,18 @@ def test_a_cursor_whose_plus_became_a_space_does_not_replay_the_event(ddb):
     # and the honest cursor still behaves
     clean = c.get("/events", params={"household": "AHMET1", "since": cursor, "wait": 0}).json()
     assert clean["events"] == []
+
+
+def test_events_expire_so_the_channel_is_a_tail_not_an_archive(ddb):
+    """Every event was being kept for ever, and the channel is only ever read seconds old."""
+    import time as _time
+    c = client(ddb)
+    c.post("/checkin", json={"household": "AHMET1"})
+    from vitaheart import store
+    rows = store.table().query(
+        KeyConditionExpression=__import__("boto3").dynamodb.conditions.Key("PK").eq("HH#AHMET1")
+        & __import__("boto3").dynamodb.conditions.Key("SK").begins_with("EV#"))["Items"]
+    assert rows, "expected an event"
+    for r in rows:
+        assert "ttl" in r, "an event with no ttl never leaves the table"
+        assert 0 < int(r["ttl"]) - int(_time.time()) <= 3 * 86400 + 60

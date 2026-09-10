@@ -89,8 +89,12 @@ def get_profile(code: str) -> dict[str, Any] | None:
 
 def emit(code: str, kind: str, data: dict[str, Any] | None = None) -> dict[str, Any]:
     ts = now_iso()
+    # An events channel is a tail, not an archive: nothing reads an event more than a few
+    # seconds after it lands, and these were being kept for ever. Three days covers a
+    # demo, a judging window and a weekend.
     item = {"PK": _hh(code), "SK": f"EV#{ts}#{uuid.uuid4().hex[:8]}", "ts": ts,
-            "kind": kind, "data": storable(data or {})}
+            "kind": kind, "data": storable(data or {}),
+            "ttl": int(datetime.now(timezone.utc).timestamp()) + 3 * 86400}
     table().put_item(Item=item)
     return item
 

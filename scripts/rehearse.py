@@ -73,6 +73,38 @@ def loudness(path: Path) -> tuple[float, float] | None:
     return vals["mean_volume"], vals.get("max_volume", vals["mean_volume"])
 
 
+async def _rebind_explicit() -> str:
+    """Bind the microphone to a named device instead of "Default".
+
+    "Default" is what goes stale: OBS keeps a handle on whatever it opened, and after a
+    headset comes and goes the source reports itself healthy and delivers digital
+    silence. Naming the device is what actually reopens it. AirPods first, since they
+    are what the founder records with; the built-in microphone otherwise.
+    """
+    from obs_director import Obs
+    async with Obs() as obs:
+        devices = (await obs.call("GetInputPropertiesListPropertyItems",
+                                  {"inputName": "Mic/Aux",
+                                   "propertyName": "device_id"}))["propertyItems"]
+        real = [(d.get("itemName") or "", d.get("itemValue") or "") for d in devices
+                if d.get("itemValue") not in ("default", "disabled")
+                and not any(w in (d.get("itemName") or "").lower()
+                            for w in ("teams", "hue", "loopback"))]
+        pick = next((d for d in real if "airpod" in d[0].lower()), None) \
+            or next((d for d in real if "microphone" in d[0].lower()), None) \
+            or (real[0] if real else None)
+        if not pick:
+            return "no physical input device offered by OBS"
+        await obs.call("SetInputSettings", {"inputName": "Mic/Aux", "overlay": True,
+                                            "inputSettings": {"device_id": "disabled"}})
+        await asyncio.sleep(0.6)
+        await obs.call("SetInputSettings", {"inputName": "Mic/Aux", "overlay": True,
+                                            "inputSettings": {"device_id": pick[1]}})
+        await obs.call("SetInputMute", {"inputName": "Mic/Aux", "inputMuted": False})
+        await asyncio.sleep(1.0)
+        return pick[0]
+
+
 async def _record_seconds(seconds: float) -> tuple[Path | None, str]:
     """Record briefly, and say which microphone OBS was listening to."""
     from obs_director import Obs
@@ -129,11 +161,30 @@ def audio_check() -> None:
         return
     mean, peak = got
     # a live microphone always has a noise floor; digital silence is about -91 dB
+    if peak <= -85.0:
+        # Do not just report it: rebinding to a named device is known to fix exactly this,
+        # so try, then measure again. A check that can repair itself should.
+        named = asyncio.run(_rebind_explicit())
+        print(f"     microphone was silent; re-bound it to {named} and trying again")
+        try:
+            path2, mic2 = asyncio.run(_record_seconds(3.5))
+        except Exception as exc:
+            check("a microphone is reaching the recording", False, str(exc))
+            return
+        time.sleep(1.5)
+        got2 = loudness(path2) if path2 and path2.exists() else None
+        if path2:
+            try:
+                path2.unlink()
+            except OSError:
+                pass
+        if got2:
+            mean, peak, mic = got2[0], got2[1], named
     live = peak > -85.0
     check("a microphone is reaching the recording", live,
           f"{mic} · peak {peak:.0f} dB, mean {mean:.0f} dB" if live else
-          f"{mic} is delivering silence. Put the AirPods in and keep them in — the "
-          f"built-in microphone does not reach OBS on this machine.")
+          f"{mic} is delivering silence even after a re-bind. Open OBS Settings > Audio "
+          f"and choose the input by name, or put the AirPods in.")
 
 
 def main() -> int:
@@ -146,7 +197,7 @@ def main() -> int:
     beat = until(lambda: [e for e in httpx.get(
         f"{API}/events", params={"household": HH, "since": cur, "wait": 12}, timeout=30).json()["events"]
         if e["kind"] == "prompter" and (e["data"] or {}).get("cmd") in ("alive", "device")], 26)
-    if not check("the television is listening (it beats every 10 s)", bool(beat),
+    if not check("the television is listening (it beats every 20 s)", bool(beat),
                  "" if beat else "relaunch it: sh scripts/demo_day.sh"):
         print("\nNOT READY — nothing below would have worked either")
         return 1

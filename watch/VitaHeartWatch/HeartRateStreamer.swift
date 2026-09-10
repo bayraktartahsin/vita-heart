@@ -83,7 +83,7 @@ final class HeartRateStreamer: NSObject, ObservableObject {
                             : "The television is playing a recorded session"
                     }
                 }
-                try? await Task.sleep(nanoseconds: 3_000_000_000)
+                try? await Task.sleep(nanoseconds: 5_000_000_000)
             }
         }
     }

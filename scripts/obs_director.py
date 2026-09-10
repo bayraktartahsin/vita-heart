@@ -39,7 +39,7 @@ OBS_CONFIG = Path.home() / "Library/Application Support/obs-studio/plugin_config
 CANVAS = (1920, 1080)
 ROOT = Path(__file__).resolve().parent.parent
 VPKG = ROOT / "tv" / "build" / "aarch64-debug" / "vitahearttv_aarch64.vpkg"
-DEAF_AFTER = 45.0     # the television beats every 10 s
+DEAF_AFTER = 70.0     # the television beats every 20 s: two missed beats
 
 # Which OBS scene is which surface. The names in the scene collection are the
 # founder's own, so match on a word rather than demand a rename. Most specific first:
@@ -308,7 +308,7 @@ async def follow(obs: Obs, scenes: dict[str, str]) -> None:
         while True:
             try:
                 r = await http.get(f"{API}/events",
-                                   params={"household": HOUSEHOLD, "since": cursor, "wait": 20})
+                                   params={"household": HOUSEHOLD, "since": cursor, "wait": 25})
                 r.raise_for_status()
                 body = r.json()
             except Exception:                              # a dropped poll must not end the take

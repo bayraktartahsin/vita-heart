@@ -92,7 +92,10 @@ export const App = ({apiBaseUrl = API_BASE_URL, household: initialHousehold}: {a
   // of once, in pre-flight, minutes before the take. This runs through the same events
   // channel the demo steps arrive on, so if the beat stops, the steps have stopped too.
   useEffect(() => {
-    const id = setInterval(() => { report('alive'); }, 10000);
+    // Every beat wakes each long-polling client as well as writing itself, so its
+    // period costs about six requests. Twenty seconds still detects a deaf
+    // television long before a take begins.
+    const id = setInterval(() => { report('alive'); }, 20000);
     return () => clearInterval(id);
   }, [report]);
 

@@ -98,7 +98,7 @@
     let lastAsk = {text: '', at: 0};
     for (;;) {
       try {
-        const r = await fetch(`${location.origin}/events?household=${hh}&since=${encodeURIComponent(cursor ?? '')}&wait=20`);
+        const r = await fetch(`${location.origin}/events?household=${hh}&since=${encodeURIComponent(cursor ?? '')}&wait=25`);
         const j = await r.json(); cursor = j.cursor;
         for (const e of j.events) {
           const d = e.data || {};

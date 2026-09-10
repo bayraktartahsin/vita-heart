@@ -76,7 +76,7 @@
     let cursor;
     for (;;) {
       try {
-        const r = await fetch(`${api}/events?household=${household}&since=${encodeURIComponent(cursor ?? '')}&wait=20`);
+        const r = await fetch(`${api}/events?household=${household}&since=${encodeURIComponent(cursor ?? '')}&wait=25`);
         const j = await r.json();
         cursor = j.cursor;
         if (j.events.some(e => ['checkin','dose','message','summary','med','signal','session','board'].includes(e.kind))) {

@@ -134,7 +134,7 @@ export class VitaHeartApi {
     return this.json<Board>(this.url('/board'));
   }
 
-  events(since: string | undefined, waitSeconds = 20): Promise<{events: LiveEvent[]; cursor: string}> {
+  events(since: string | undefined, waitSeconds = 25): Promise<{events: LiveEvent[]; cursor: string}> {
     // the server holds the request for `waitSeconds`; anything past that plus a margin
     // is a socket that is never going to answer
     return this.json(this.url('/events', {since, wait: waitSeconds}), undefined,

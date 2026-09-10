@@ -206,7 +206,7 @@ function loop(){
 function begin(){
   // Starting a take the television cannot hear costs the whole take: it happened once,
   // and every step was emitted correctly into a screen that had stopped listening.
-  if (!tvSeen || (Date.now() - tvSeen) / 1000 > 26) {
+  if (!tvSeen || (Date.now() - tvSeen) / 1000 > 46) {
     $('nextText').textContent = 'The television is not listening. Relaunch the app (sh scripts/demo_day.sh), '
       + 'wait for TV: listening, then press Start.';
     $('tv').classList.add('bad');
@@ -279,7 +279,7 @@ function state(){
 let tvSeen = 0;
 function tvLight(){
   const el = $('tv'), age = (Date.now() - tvSeen) / 1000;
-  const ok = tvSeen && age < 26;                 // it beats every 10 s
+  const ok = tvSeen && age < 46;                 // it beats every 20 s
   el.textContent = ok ? 'TV: listening' : (tvSeen ? `TV: silent ${Math.round(age)}s` : 'TV: ?');
   el.classList.toggle('ok', !!ok);
   el.classList.toggle('bad', !ok);
@@ -289,7 +289,7 @@ setInterval(tvLight, 1000);
 (async function poll(){
   for(;;){
     try{
-      const r = await fetch(`${API}/events?household=${HH}&since=${encodeURIComponent(cursor ?? '')}&wait=20`);
+      const r = await fetch(`${API}/events?household=${HH}&since=${encodeURIComponent(cursor ?? '')}&wait=25`);
       const j = await r.json(); cursor = j.cursor;
       for (const e of j.events){
         if (e.kind !== 'prompter') continue;

@@ -25,6 +25,7 @@ from pathlib import Path
 import httpx
 
 API = "https://rrjb1x8j2b.execute-api.eu-north-1.amazonaws.com"
+IDLE_EXIT = 3 * 3600      # a daemon left running overnight is pure waste
 
 
 def recorded(path: str | None):
@@ -72,6 +73,7 @@ def main() -> None:
     atexit.register(lambda: lock.unlink(missing_ok=True))
     print(f"replay daemon watching {a.household}: a recorded session will be fed automatically", flush=True)
     served: set[str] = set()
+    last_fed = time.monotonic()
     while True:
         try:
             live = httpx.get(f"{a.api}/session/live", params={"household": a.household}, timeout=30).json()["live"]
@@ -79,10 +81,16 @@ def main() -> None:
             time.sleep(2)
             continue
         if not live or live["id"] in served or live.get("source") == "watch":
-            time.sleep(1)
+            # Once a second, for ever, was most of a million Lambda invocations. Five
+            # seconds is still four times faster than anyone can press the button.
+            if time.monotonic() - last_fed > IDLE_EXIT:
+                print(f"nothing to feed for {IDLE_EXIT / 3600:.0f} h; stopping", flush=True)
+                return
+            time.sleep(5)
             continue
         sid = live["id"]
         served.add(sid)
+        last_fed = time.monotonic()
         print(f"feeding session {sid} ({live.get('source')})", flush=True)
         t0 = time.monotonic()
         for t, bpm in recorded(a.file):

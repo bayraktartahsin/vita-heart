@@ -147,5 +147,9 @@ ONE key press records the whole thing.
   grey SCENE badge in the prompter changes.
 
   Not recorded: Safari, the prompter. Keep it on the second screen.
+
+  WHEN YOU ARE DONE:  sh scripts/stop_demo.sh
+  Everything here holds a poll against the API. Left running overnight it spent
+  most of a month's free Lambda quota on a demo nobody was watching.
 ────────────────────────────────────────────────────────────────────────
 NOTE
