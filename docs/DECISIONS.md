@@ -2,7 +2,7 @@
 
 | Date | Decision | Why |
 |---|---|---|
-| 5 Sep | Name: Vita Heart (not Hearth) | Founder's call; a name that needs explaining is a bad name. |
+| 5 Sep | Name: Vita Heart (not Heart) | Founder's call; a name that needs explaining is a bad name. |
 | 5 Sep | Long-poll `/events` instead of SSE | Lambda behind API Gateway buffers responses; Function URLs 403 in this account. Sub-second delivery, honest. |
 | 5 Sep | Nova Lite reads labels, Claude Sonnet 4.5 writes prose, Nova Pro fallback | Measured in eu-north-1: 0.8 s vs 2.0 s for one word; Claude Sonnet 5 not enabled on the account. |
 | 5 Sep | Reader must quote its own transcript | Nova Lite produced "Ibuprofen 200 mg" from a white rectangle. Grounding removed the failure class. |

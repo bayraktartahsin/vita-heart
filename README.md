@@ -23,7 +23,7 @@ Live API: `https://rrjb1x8j2b.execute-api.eu-north-1.amazonaws.com` · demo hous
 ```bash
 # API and agents (Python 3.12+)
 uv venv .venv && uv pip install --python .venv/bin/python -r api/requirements.txt -r agents/requirements.txt
-.venv/bin/python -m pytest -q tests                     # 37 tests, no AWS needed (moto)
+.venv/bin/python -m pytest -q tests                     # 76 tests, no AWS needed (moto)
 VITAHEART_LIVE=1 .venv/bin/python -m pytest -q tests    # + live Bedrock / RxNorm / openFDA tests
 cd api && ../.venv/bin/uvicorn vitaheart.app:asgi --reload   # local API on :8000 (uses your AWS profile for DynamoDB)
 
