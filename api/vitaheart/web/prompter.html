@@ -134,7 +134,7 @@ function draw(){
   } else if (ph.k === 'hold') {
     st.innerHTML = ring(remain, ph.secs) +
       `<div class="doList"><b>Say nothing. Let it happen.</b></div>` +
-      `<div class="hint">${ph.b.scene === 'ALEXA' ? 'wait — this moves on the moment Alexa stops talking' : ph.b.scene === 'WRIST' ? 'hold the wrist still' : 'the screen is catching up'}</div>`;
+      `<div class="hint">${ph.b.waitFor === 'spoke' ? 'wait — this moves on the moment Alexa stops talking' : ph.b.waitFor === 'hr' ? 'wait — this moves when the first heart rate lands' : 'the screen is catching up'}</div>`;
   } else {
     st.innerHTML = `<div class="doList"><b>Two seconds of silence, then stop the recording.</b></div>
       <div class="hint">${mmss(elapsed)} · target 2:45</div>`;
@@ -198,11 +198,13 @@ function loop(){
     const ph = PHASES[p], gone = elapsed - phaseStart;
     // timed phases run themselves; a spoken line waits for the voice, then for a grace period,
     // so a missed word never stalls the take.
-    if (ph.k === 'hold' && ph.b.scene === 'ALEXA') {
-      // Wait for the voice, not for the clock: the answer's length is not knowable in
-      // advance. The budget is still a ceiling, so a silent surface cannot stall a take.
-      const spoke = alexaSpoke > phaseStart;
-      if ((spoke && gone >= 0.8) || gone >= ph.secs) advance(); else draw();
+    if (ph.k === 'hold' && ph.b.waitFor) {
+      // Wait for the thing, not for the clock. Neither the length of a spoken answer nor
+      // the delay before a wrist's first sample is knowable in advance, and guessing put
+      // Alexa on top of the narration and the claim about a heart rate before the number
+      // appeared. The budget stays as a ceiling so nothing can stall a take.
+      const at = ph.b.waitFor === 'spoke' ? alexaSpoke : hrSeen;
+      if ((at > phaseStart && gone >= 0.8) || gone >= ph.secs) advance(); else draw();
     }
     else if (ph.k === 'do' || ph.k === 'hold') { if (gone >= ph.secs) advance(); else draw(); }
     else if (ph.k === 'say') { if (gone >= ph.secs + 1.2) advance(); else draw(); }
@@ -282,7 +284,7 @@ function state(){
     body: JSON.stringify({household: HH, cmd: 'state', index: PHASES[p].i, elapsed: Math.round(elapsed), running})}).catch(()=>{});
 }
 // ---- is the television listening? ----------------------------------------------
-let tvSeen = 0, alexaSpoke = -1, wristSeen = 0;
+let tvSeen = 0, alexaSpoke = -1, wristSeen = 0, hrSeen = -1;
 function tvLight(){
   const el = $('tv'), age = (Date.now() - tvSeen) / 1000;
   const ok = tvSeen && age < 46;                 // it beats every 20 s
@@ -310,6 +312,8 @@ setInterval(wristLight, 2000);
       const r = await fetch(`${API}/events?household=${HH}&since=${encodeURIComponent(cursor ?? '')}&wait=25`);
       const j = await r.json(); cursor = j.cursor;
       for (const e of j.events){
+        // the first heart rate of a session is the evidence for the line about it
+        if (e.kind === 'hr') { hrSeen = elapsed; continue; }
         if (e.kind !== 'prompter') continue;
         const c = (e.data || {}).cmd;
         // the television's heartbeat. It is the same channel the demo steps travel on,

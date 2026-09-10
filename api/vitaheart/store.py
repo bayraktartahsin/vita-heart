@@ -14,7 +14,7 @@ Timestamps are ISO-8601 UTC with microseconds so they sort as strings.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Any
 
@@ -239,12 +239,19 @@ def reset_demo(code: str) -> dict[str, Any]:
     doses = r.get("Items", [])
     for i in doses:
         t.delete_item(Key={"PK": i["PK"], "SK": i["SK"]})
-    live = live_session(code)
-    if live:
-        t.update_item(Key={"PK": _hh(code), "SK": f"SESSION#{live['id']}"},
-                      UpdateExpression="SET #s = :s, finished = :f",
-                      ExpressionAttributeNames={"#s": "state"},
-                      ExpressionAttributeValues={":s": "abandoned", ":f": now_iso()})
+    # Every session from the last day, not only a live one. A finished session keeps its
+    # summary, so tonight's page went on reporting a seated session that the reset had
+    # thrown away — next to a panel saying the day had not started.
+    since = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat(timespec="microseconds")
+    cleared = 0
+    for sess in sessions_since(code, since):
+        if sess.get("state") in ("live", "finished"):
+            t.update_item(Key={"PK": _hh(code), "SK": sess["SK"]},
+                          UpdateExpression="SET #s = :s, finished = :f",
+                          ExpressionAttributeNames={"#s": "state"},
+                          ExpressionAttributeValues={":s": "reset", ":f": now_iso()})
+            cleared += 1
+    live = cleared
     emit(code, "board", {"reset": True})
     return {"checkin": had_checkin, "doses": len(doses), "session": bool(live)}
 

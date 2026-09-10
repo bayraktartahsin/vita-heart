@@ -98,7 +98,9 @@ export function Family({api, onBack, refreshKey}: Props) {
 
 const styles = StyleSheet.create({
   wrap: {flex: 1, flexDirection: 'row', gap: s(26)},
-  left: {flex: 1.15, gap: s(24)},
+  // the Back button floats at the bottom-left; without this the messages card runs
+  // under it and the button was drawn across Selin's name, on camera
+  left: {flex: 1.15, gap: s(24), paddingBottom: s(72)},
   summary: {flex: 1},
   para: {fontFamily: 'serif', fontSize: s(33), lineHeight: s(45), color: color.text},
   p: {fontSize: type.small, lineHeight: s(34), color: color.dim},

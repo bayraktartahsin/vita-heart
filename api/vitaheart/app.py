@@ -600,6 +600,15 @@ def demo_reset(body: ResetIn) -> dict:
     """
     _profile_or_404(body.household)
     out = store.reset_demo(body.household)
+    # Rewrite the summary against the cleared day, or the family page opens the next take
+    # describing the last one: "1 of 2 doses confirmed, and a seated session of 12
+    # seconds" sitting beside a panel that says none were confirmed. Two claims, one
+    # screen, and the page's whole argument is that it only states facts.
+    try:
+        from .night import watch
+        watch.run_for(body.household, notify=False)
+    except Exception:
+        logging.getLogger("vitaheart.demo").exception("summary reset failed")
     store.emit(body.household, "demo", {"step": "board", "source": None, "scene": "TV"})
     return {"ok": True, **out}
 

@@ -67,3 +67,18 @@ def test_the_prompter_learns_the_watch_is_on_a_wrist_by_itself():
     page = (Path(__file__).resolve().parent.parent / "api" / "vitaheart" / "web"
             / "prompter.html").read_text(encoding="utf-8")
     assert "c === 'wrist'" in page and "function wristLight" in page
+
+
+def test_a_hold_can_wait_for_a_signal_instead_of_guessing():
+    """Guessing put Alexa on top of the narration, and a claim before its evidence.
+
+    The founder said "that is his real heart rate" while the screen still read "waiting
+    for the wrist": the first sample landed six seconds later.
+    """
+    web = Path(__file__).resolve().parent.parent / "api" / "vitaheart" / "web"
+    prompter = (web / "prompter.html").read_text(encoding="utf-8")
+    script = (web / "script.js").read_text(encoding="utf-8")
+    assert "ph.b.waitFor" in prompter, "the prompter must honour a declared signal"
+    assert "e.kind === 'hr'" in prompter, "the first heart rate must reach the prompter"
+    assert script.count("waitFor: 'spoke'") == 2, "both Alexa turns wait for the voice"
+    assert "waitFor: 'hr'" in script, "the session must wait for the first sample"

@@ -28,7 +28,11 @@ def facts_for(code: str, now: datetime | None = None) -> dict[str, Any]:
     since = (now - timedelta(hours=24)).isoformat(timespec="microseconds")
     ring_events = [{"kind": s["kind"], "ts": s["ts"], "device": s.get("device"), "value": s.get("value")}
                    for s in store.signals_since(code, since)]
-    sessions = [s for s in store.sessions_since(code, since) if s.get("summary")]
+    # only a session that actually finished. An abandoned one keeps the summary it had
+    # when it was cut short, and after a reset that made tonight's page report a seated
+    # session that had been thrown away.
+    sessions = [s for s in store.sessions_since(code, since)
+                if s.get("summary") and s.get("state") == "finished"]
     return {
         "profile": profile,
         "ring_events": ring_events,

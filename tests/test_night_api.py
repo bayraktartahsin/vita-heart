@@ -31,3 +31,23 @@ def test_family_page_and_trace_routes(ddb):
     c = client(ddb)
     assert "Vita Heart" in c.get("/family").text
     assert c.get("/trace", params={"household": "AHMET1"}).json() == {"steps": []}
+
+
+def test_an_abandoned_session_is_not_reported_as_a_seated_session(ddb):
+    """Reset cuts a session short but leaves the summary it had.
+
+    Tonight's page then told the family he had done a seated session that had been
+    thrown away — beside a panel that said the day had not started.
+    """
+    c = client(ddb)
+    sid = c.post("/session/start", json={"household": "AHMET1", "source": "recorded"}).json()["id"]
+    c.post("/session/hr", json={"household": "AHMET1", "session": sid, "bpm": 88})
+    c.post("/session/finish", json={"household": "AHMET1", "session": sid,
+                                    "summary": {"minutesActive": 3.0, "inRangeShare": 0.8}})
+    after_finished = c.post("/night/run", json={"household": "AHMET1", "notify": False}).json()
+    assert "seated session" in after_finished["text"]
+    assert "No seated session" not in after_finished["text"]
+
+    c.post("/demo/reset", json={"household": "AHMET1"})
+    text = c.get("/family/summary", params={"household": "AHMET1"}).json()["summary"]["text"]
+    assert "No seated session today" in text, text

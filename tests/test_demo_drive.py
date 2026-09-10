@@ -110,3 +110,19 @@ def test_a_failing_summary_refresh_never_breaks_the_take(ddb, monkeypatch):
                         lambda hh, notify=True: (_ for _ in ()).throw(RuntimeError("bedrock down")))
     c = client(ddb)
     assert c.post("/demo", json={"household": "AHMET1", "step": "stop"}).status_code == 200
+
+
+def test_start_again_also_rewrites_the_summary_for_the_cleared_day(ddb, monkeypatch):
+    """Otherwise the next take opens describing the last one.
+
+    At 0:25 of a take the family page said "0 of 2 doses confirmed" in one panel and
+    "1 of 2 scheduled doses were confirmed, and there was a seated session of 12
+    seconds" in the other — the previous run's day, on a page whose whole argument is
+    that it states only facts.
+    """
+    from vitaheart.night import watch
+    calls: list[str] = []
+    monkeypatch.setattr(watch, "run_for", lambda hh, notify=True: calls.append(hh) or {})
+    c = client(ddb)
+    assert c.post("/demo/reset", json={"household": "AHMET1"}).status_code == 200
+    assert calls == ["AHMET1"]
