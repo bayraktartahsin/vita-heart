@@ -221,7 +221,7 @@ async def main() -> int:
             async with Obs() as obs:
                 print("director: connected to OBS")
                 said = False
-                await follow(obs, await aim(obs, quiet=True))
+                await follow(obs, await aim(obs))
         except DOWN:
             if not said:
                 print(OFFLINE)
