@@ -38,3 +38,18 @@ def test_an_unknown_household_is_refused(ddb):
 def test_a_nonsense_source_is_refused(ddb):
     c = client(ddb)
     assert c.post("/demo", json={"household": "AHMET1", "step": "session", "source": "made-up"}).status_code == 422
+
+
+def test_the_scene_reaches_the_director_so_the_camera_can_follow(ddb):
+    c = client(ddb)
+    cursor = c.get("/events", params={"household": "AHMET1", "wait": 0}).json()["cursor"]
+    c.post("/demo", json={"household": "AHMET1", "step": "scene", "scene": "FAMILY"})
+    e = [x for x in c.get("/events", params={"household": "AHMET1", "since": cursor, "wait": 0}).json()["events"]
+         if x["kind"] == "demo"]
+    assert e[0]["data"]["scene"] == "FAMILY"
+
+
+def test_a_scene_that_is_not_one_of_the_three_is_refused(ddb):
+    c = client(ddb)
+    assert c.post("/demo", json={"household": "AHMET1", "step": "scene",
+                                 "scene": "TERMINAL"}).status_code == 422

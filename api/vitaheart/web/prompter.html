@@ -143,14 +143,26 @@ function advance(){
   const ph = PHASES[p];
   // the television performs the step itself: no click reaches the simulator from a script,
   // and a take must not depend on a hand finding a key while a sentence is being read
-  if (ph.k === 'do' && ph.b.drive) { drive(ph.b.drive); }
+  camera(ph.b.scene);
+  if (ph.k === 'do' && ph.b.drive) { drive(ph.b.drive, ph.b.scene); }
+  if (ph.k === 'end') { drive('endrecord'); }
   draw(); state();
 }
 
-function drive(step){
+function drive(step, scene){
   const source = watchReady ? 'watch' : 'recorded';
   fetch(`${API}/demo`, {method:'POST', headers:{'content-type':'application/json'},
-    body: JSON.stringify({household: HH, step, source})}).catch(()=>{});
+    body: JSON.stringify({household: HH, step, source, scene: scene ?? null})}).catch(()=>{});
+}
+
+// The camera follows the script. obs_director.py hears this on the events channel and
+// switches the scene itself, because a function key pressed mid-sentence is the thing
+// that goes wrong in a take, and it goes wrong quietly.
+let shown = null;
+function camera(scene){
+  if (!scene || scene === shown) return;
+  shown = scene;
+  drive('scene', scene);
 }
 
 function loop(){
@@ -169,10 +181,12 @@ function loop(){
 
 function begin(){
   const big = $('big'); let n = 3;
-  big.style.display = 'flex'; $('bigN').textContent = n; $('bigT').textContent = 'OBS should be recording';
+  big.style.display = 'flex'; $('bigN').textContent = n; $('bigT').textContent = 'the recording starts by itself';
   const id = setInterval(() => {
     n--;
-    if (n === 0) { clearInterval(id); big.style.display = 'none'; running = true; t0 = performance.now(); elapsed = 0; phaseStart = 0; p = 0; if (micOn) listen(); draw(); state(); }
+    if (n === 0) { clearInterval(id); big.style.display = 'none'; running = true; t0 = performance.now(); elapsed = 0; phaseStart = 0; p = 0;
+      shown = null; drive('record'); camera(PHASES[0].b.scene);
+      if (micOn) listen(); draw(); state(); }
     else $('bigN').textContent = n;
   }, 1000);
 }
