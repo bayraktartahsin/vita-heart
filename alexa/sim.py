@@ -20,7 +20,7 @@ import boto3
 
 from . import server as srv
 
-MODEL = os.environ.get("VITAHEART_WRITER_MODEL", "eu.anthropic.claude-sonnet-4-5-20250929-v1:0")
+MODEL = os.environ.get("VITAHEART_WRITER_MODEL", "eu.anthropic.claude-sonnet-4-6")
 REGION = os.environ.get("VITAHEART_REGION", "eu-north-1")
 
 SYSTEM = ("You are Alexa+ speaking to a family that uses Vita Heart, the health room on an older parent's television. "

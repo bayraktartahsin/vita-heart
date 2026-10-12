@@ -52,7 +52,7 @@ See docs/FRICTION-LOG.md (13 entries; paste in full).
 Contribution URL: (PR link) · Repository: github.com/bayraktartahsin/vita-heart · GitHub username: bayraktartahsin · Description: see docs/OPEN-SOURCE.md.
 
 ## AWS Builder mini challenge
-Amazon Bedrock (Nova Lite for label reading, Claude Sonnet 4.5 for prose), Bedrock AgentCore Runtime hosting Strands agents with observability, Lambda + API Gateway, DynamoDB, S3, SNS, EventBridge. Documented in README and docs/architecture.png.
+Amazon Bedrock (Nova Lite for label reading, Claude Sonnet 4.6 for prose), Bedrock AgentCore Runtime hosting Strands agents with observability, Lambda + API Gateway, DynamoDB, S3, SNS, EventBridge. Documented in README and docs/architecture.png.
 
 ## Testing instructions
 See docs/TESTING.md (paste in full; demo household AHMET1, no credentials needed).

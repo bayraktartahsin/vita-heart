@@ -13,3 +13,4 @@
 | 5 Sep | MCP: per-event-loop server factory; host guard off | SDK's session manager runs once per instance; its localhost-only host check returned 421 behind API Gateway. Bearer auth guards the endpoint. |
 | 5 Sep | Simulated Alexa+ surface, real MCP server | The MCP Toolkit is partner-only; the rules sanction the simulated path; the tools the model sees are the server's own. |
 | 5 Sep | No Fire TV hardware | Not orderable to Istanbul; the rules accept the Vega simulator in the video. |
+| 12 Oct | Writer model moved to Claude Sonnet 4.6 | AWS moved Sonnet 4.5 to Legacy on 8 Oct (end of life 8 Apr 2027). 4.6 was already enabled on the account; measured about twice as fast on the writer path and it held the Alexa 25-word limit where 4.5 ran one word over. The 5-family is listed but not enabled. |

@@ -2,7 +2,7 @@
 
 **Vega OS SDK 0.24 + Vega CLI 1.3.4.** Used for the TV app end to end. Worked: `vega project generate`, the Virtual Device (boots in ~40 s, stable for hours), `run-app`, the Builder Tools MCP docs search from Claude Code. Needs work: paths with spaces break the manifest builder; the helloWorld template has no `[wants]` network entry so fetch silently does nothing; no screenshot/recording command; JS console output is not in `start-log-stream`. Onboarding: two hours from zero to an app on the Virtual Device, most of it spent on the two silent failures above. Again: yes; Vega is a pleasant React Native target once the manifest is right.
 
-**Amazon Bedrock (Nova Lite, Nova Pro, Claude Sonnet 4.5) via Converse.** Worked: one API for vision and text; Nova Lite reads a label in about a second. Needs work: Nova Lite completes blank images into plausible medicines (we ground it in its own transcript); Claude Sonnet 5 shows in the model list but is not enabled for the account with no self-serve path. Again: yes.
+**Amazon Bedrock (Nova Lite, Nova Pro, Claude Sonnet 4.6) via Converse.** Worked: one API for vision and text; Nova Lite reads a label in about a second. Needs work: Nova Lite completes blank images into plausible medicines (we ground it in its own transcript); Claude Sonnet 5 and 5.5 show in the model list but are not enabled for the account, with no self-serve path; and Sonnet 4.5 entered Legacy on 8 Oct 2026 mid-hackathon, so we migrated to 4.6 (which also halved writer latency). Again: yes.
 
 **Strands Agents SDK 1.54.** Worked: hooks for tool tracing, `structured_output`, model-agnostic. Needs work: nothing blocking. Again: yes.
 
